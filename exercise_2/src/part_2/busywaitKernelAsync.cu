@@ -1,6 +1,6 @@
 /*
  *
- * nullKernelAsync.cu
+ * busywaitKernelAsync.cu
  *
  * Microbenchmark for throughput of asynchronous kernel launch.
  *
@@ -40,17 +40,20 @@
 
 #include "chTimer.h"
 
+__device__ int dTime;
+
 __global__
 void
 busywaitKernel( int cycles, bool flag )
 {
-	int stop, start = clock();
+	int stop, start = clock_gettime(CLOCK_MONOTONIC);
 	do {
-		stop = clock();
+		stop = clock_gettime(CLOCK_MONOTONIC);
 	} while (stop - start < cycles)
 	
 	if ( flag && threadIdx.x == 0 && blockIdx.x == 0 ) {
 		dTime = stop - start;
+		printf( "%.2f us\n", dTime );
 	}
 }
 
@@ -69,7 +72,7 @@ main( int argc, char *argv[] )
 		printf( "Cycles: %d \n", cycles);
     	chTimerGetTime( &start );
     	for ( int i = 0; i < cIterations; i++ ) {
-        	busywaitKernel<<<tBlocks,threads>>>( cycles, flag );
+        	busywaitKernel<<<tBlocks,threadsPBlock>>>( cycles, flag );
     	}
     	cudaThreadSynchronize();
     	chTimerGetTime( &stop );	
