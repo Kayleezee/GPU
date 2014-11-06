@@ -49,9 +49,7 @@ NullKernel()
 int
 main( int argc, char *argv[] )
 {
-	const int cIterations = 1000000;
-	int tBlocks = atoi(argv[1]);
-	int threads = atoi(argv[2]); 
+	const int cIterations = 1000000; 
 	
     printf( "Measuring asynchronous launch time... " ); fflush( stdout );
 
@@ -59,7 +57,7 @@ main( int argc, char *argv[] )
 
     chTimerGetTime( &start );
     for ( int i = 0; i < cIterations; i++ ) {
-        NullKernel<<<tBlocks,threadsPBlock>>>();
+        NullKernel<<<1,1>>>();
     }
     cudaThreadSynchronize();
     chTimerGetTime( &stop );
