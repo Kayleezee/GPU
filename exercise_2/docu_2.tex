@@ -127,7 +127,7 @@
 %----------------------------------------------------------------------------------------
 
 \newcommand{\hmwkTitle}{Übung\ \#2} % Assignment title
-\newcommand{\hmwkDueDate}{Dienstag,\ 01.\ November\ 2014} % Due date
+\newcommand{\hmwkDueDate}{Donnerstag,\ 06.\ November\ 2014} % Due date
 \newcommand{\hmwkClass}{GPU Computing} % Course/class
 \newcommand{\hmwkClassTime}{} % Class/lecture time
 \newcommand{\hmwkClassInstructor}{} % Teacher/lecturer
@@ -165,27 +165,207 @@
 \newpage
 
 %----------------------------------------------------------------------------------------
-%	Problem 1
+%	Raw Kernel Startup Time
 %----------------------------------------------------------------------------------------
 
 % To have just one problem per page, simply put a \clearpage after each problem
 
-\begin{homeworkProblem}[Problembehandlung 1]
-So kann man Quellcode integrieren:
+\begin{homeworkProblem}[Raw Kernel Startup Time]
+In der ersten Aufgabenstellung ging es darum die \textit{Startup} Zeiten für synchrone und asynchrone Kernelstartvorgänge zu messen. Dies sollte unter der Variation von \textit{thread blocks} und \textit{threads per block} durchgeführt werden. Der Wertebereich is hierbei von 1 bis 1024 für beide Parameter vorgegeben.\\ \\
+Ausgangspunkt war die zur Verfügung gestellte Datei \textit{nullKernelAsynch.cu}, welche asychrone Kernelstartvorgänge misst. Um die synchronen Kernelstartvorgänge zu messen wurde eine zweite Datei \textit{nullKernelSynch.cu} erstellt. \\ \\
+Auszug aus \textit{nullKernelAsynch.cu}:
 \begin{lstlisting}{c}
-
-for(i=0; i<7; i++)
-{
-  printf("Hello World!");
-}
-
+    chTimerGetTime( &start );
+    for ( int i = 0; i < cIterations; i++ ) {
+        NullKernel<<<1,1>>>();
+    }
+    cudaThreadSynchronize();
+    chTimerGetTime( &stop );
 \end{lstlisting}
+Hier findet die Synchronisation erst statt, nachdem die for-Schleife verlassen wird. Solange die Schleife läuft, wird bei jedem Iterationsschritt i ein neuer Kernel gestartet, unabhängig davon ob der Kernel, der zum Iterationsschritt i - 1 gestartet wurde, seine Berechnungen bereits abgeschlossen hat.  \\ 
+
+Um die synchronen Startvorgänge zu messen musste der oben dargestellte Code, für \textit{nullKernelSynch.cu}, wie folgt abgeändert werden:
+\begin{lstlisting}{c}
+    chTimerGetTime( &start );
+    for ( int i = 0; i < cIterations; i++ ) {
+        NullKernel<<<1,1>>>();
+        cudaThreadSynchronize();
+    }
+    chTimerGetTime( &stop );
+\end{lstlisting}
+Bei diesem Code wird nach jedem Kernelstart, innerhalb der Schleife, eine Synchronisation ausgeführt. Dies führt dazu, dass ein neuer Kernel erst dann gestartet wird, wenn der aktuelle Kernel seine Berechnungen abgeschlossen hat. \\
+
+Für die asynchrone Variante wurden folgende Werte gemessen: \\ \\
+\begin{tabular}{|c|c|c|}
+\hline
+	thread blocks & threads per block & time in micros\\
+\hline
+	1024 & 1 & 1.97\\
+\hline
+	512 & 2 & 1.95\\
+\hline
+	256 & 4 & 1.94\\
+\hline
+	128 & 8 & 1.92\\
+\hline
+	64 & 16 & 1.92\\
+\hline
+	32 & 32 & 1.88\\
+\hline
+	16 & 64 & 1.95\\
+\hline
+	8 & 128 & 1.85\\
+\hline
+	4 & 256 & 1.93\\
+\hline
+	2 & 512 & 1.92\\
+\hline
+\end{tabular}
+\begin{tabular}{|c|c|c|}
+\hline
+	thread blocks & threads per block & time in micros\\
+\hline
+	1 & 1024 & 1.93\\
+\hline
+	1 & 512 & 1.90\\
+\hline
+	1 & 256 & 1.92\\
+\hline
+	1 & 128 & 1.90\\
+\hline
+	1 & 64 & 1.91\\
+\hline
+	1 & 32 & 1.93\\
+\hline
+	1 & 16 & 1.89\\
+\hline
+	1 & 8 & 1.94\\
+\hline
+	1 & 4 & 1.97\\
+\hline
+	1 & 2 & 1.95\\
+\hline
+\end{tabular}
+\\ \\ \\ \\
+Für die synchrone Variante wurden folgende Werte gemessen: \\ \\
+\begin{tabular}{|c|c|c|}
+\hline
+	thread blocks & threads per block & time in micros\\
+\hline
+	1024 & 1 & 9.29\\
+\hline
+	512 & 2 & 7.91\\
+\hline
+	256 & 4 & 7.11\\
+\hline
+	128 & 8 & 6.65\\
+\hline
+	64 & 16 & 6.43\\
+\hline
+	32 & 32 & 6.44\\
+\hline
+	16 & 64 & 6.47\\
+\hline
+	8 & 128 & 6.51\\
+\hline
+	4 & 256 & 6.49\\
+\hline
+	2 & 512 & 6.45\\
+\hline
+\end{tabular}
+\begin{tabular}{|c|c|c|}
+\hline
+	thread blocks & threads per block & time in micros\\
+\hline
+	1 & 1024 & 6.69\\
+\hline
+	1 & 512 & 6.35\\
+\hline
+	1 & 256 & 6.70\\
+\hline
+	1 & 128 & 6.54\\
+\hline
+	1 & 64 & 6.60\\
+\hline
+	1 & 32 & 6.79\\
+\hline
+	1 & 16 & 6.75\\
+\hline
+	1 & 8 & 6.63\\
+\hline
+	1 & 4 & 6.57\\
+\hline
+	1 & 2 & 6.45\\
+\hline
+\end{tabular}
+\\ \\ \\
+\includegraphics[width=\textwidth]{measurements.png}
+Betrachtet man das Diagramm \textit{Kernel startup time} sieht man, das die durchschnittlichen Ausführungszeiten für beide Varianten eine Differenz aufweisen. Die Ausführungszeiten für die synchronisierte Variante sind im Durchschnitt etwa um den Faktor 3 länger. Betrachtet man den Code des Kernels, so stellt man fest, dass dieser leer ist.
+\\
+\begin{lstlisting}{c}
+   	__global__
+	void
+	NullKernel()
+	{
+	}
+\end{lstlisting}
+
+Verwunderlich ist, dass obwohl im Kernel keine Berechnungen durchgeführt werden, die \textit{threads} der asynchronen Variante durchschnittlich 2 Mikrosekunden für den \textit{startup} benötigen. Es ist anzunehmen, dass die \textit{threads} diese Zeit im Treiber verbringen. Die Differenz der beiden Methoden ist demnach auf die Synchronisation zurück zu führen.
+
+
 
 \end{homeworkProblem}
 %----------------------------------------------------------------------------------------
-%	Problem 2
+%	Break-even Kernel Startup Time
 %----------------------------------------------------------------------------------------
-\begin{homeworkProblem}[Problem 2]
+\begin{homeworkProblem}[Break-even Kernel Startup Time]
+Hier ist ein Ausschnitt aus der Datei \textit{busywaitKernelAsync.cu}
+\begin{lstlisting}{c}
+
+__device__ int dTime;
+
+__global__
+void
+busywaitKernel( int cycles, bool flag )
+{
+	int stop, start = clock();
+
+	do {
+		stop = clock();
+	} while (stop-start < cycles);
+	
+	if( flag && threadIdx.x == 0 && blockIdx.x == 0 ) {
+		dTime = stop - start;
+	}
+}
+
+int
+main( int argc, char *argv[] )
+{
+	const int cIterations = 1000000; 
+		
+    printf( "Measuring break-even kernel startup time... " ); fflush( stdout );
+
+    chTimerTimestamp start, stop;
+	
+	for( int cycles = 0; cycles < 5000; cycles += 100 ) {
+		printf( "Cycles: %d \n", cycles); fflush( stdout );		
+    		chTimerGetTime(&start);
+    		for ( int i = 0; i < cIterations; i++ ) {
+        		busywaitKernel<<<1,1>>>(cycles, false);
+    		}
+    		cudaThreadSynchronize();
+    		chTimerGetTime(&stop);	
+
+        	double microseconds = 1e6*chTimerElapsedTime( &start, &stop );
+        	double usPerLaunch = microseconds / (float) cIterations;
+        	printf( "%.2f us\n", usPerLaunch );
+   	}
+\end{lstlisting}
+
+\includegraphics[width=\textwidth]{break-even.png}
+\\
+Im zweiten Teil der Aufgabe geht es um die \textit{Break-even Kernel Startup Time} und wie lange es dauert diese zu erreichen. Im Liniendiagramm sieht man, dass der Prozess bei 2 Mikrosekunden startet. Der Break-even wird hier bei etwa 4000 Zyklen erreicht. 
 
 \end{homeworkProblem}
 

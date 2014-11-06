@@ -46,44 +46,39 @@ __global__
 void
 busywaitKernel( int cycles, bool flag )
 {
-	int stop, start = clock_gettime(CLOCK_MONOTONIC);
+	int stop, start = clock();
+
 	do {
-		stop = clock_gettime(CLOCK_MONOTONIC);
-	} while (stop - start < cycles)
+		stop = clock();
+	} while (stop-start < cycles);
 	
-	if ( flag && threadIdx.x == 0 && blockIdx.x == 0 ) {
+	if( flag && threadIdx.x == 0 && blockIdx.x == 0 ) {
 		dTime = stop - start;
-		printf( "%.2f us\n", dTime );
 	}
 }
 
 int
 main( int argc, char *argv[] )
 {
-	const int cIterations = 1000000;
-	int tBlocks = atoi(argv[1]);
-	int threads = atoi(argv[2]); 
-	
-    printf( "Measuring asynchronous launch time... " ); fflush( stdout );
+	const int cIterations = 1000000; 
+		
+    printf( "Measuring break-even kernel startup time... " ); fflush( stdout );
 
     chTimerTimestamp start, stop;
 	
-	for( int cycles = 0; cycles < 4000; cycles += 100 ) {
-		printf( "Cycles: %d \n", cycles);
-    	chTimerGetTime( &start );
-    	for ( int i = 0; i < cIterations; i++ ) {
-        	busywaitKernel<<<tBlocks,threadsPBlock>>>( cycles, flag );
-    	}
-    	cudaThreadSynchronize();
-    	chTimerGetTime( &stop );	
-	}
+	for( int cycles = 0; cycles < 5000; cycles += 100 ) {
+		printf( "Cycles: %d \n", cycles); fflush( stdout );		
+    		chTimerGetTime(&start);
+    		for ( int i = 0; i < cIterations; i++ ) {
+        		busywaitKernel<<<1,1>>>(cycles, false);
+    		}
+    		cudaThreadSynchronize();
+    		chTimerGetTime(&stop);	
 
-    {
-        double microseconds = 1e6*chTimerElapsedTime( &start, &stop );
-        double usPerLaunch = microseconds / (float) cIterations;
-
-        printf( "%.2f us\n", usPerLaunch );
-    }
+        	double microseconds = 1e6*chTimerElapsedTime( &start, &stop );
+        	double usPerLaunch = microseconds / (float) cIterations;
+        	printf( "%.2f us\n", usPerLaunch );
+   	}
 
     return 0;
 }
