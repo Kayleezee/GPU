@@ -369,4 +369,21 @@ Im zweiten Teil der Aufgabe geht es um die \textit{Break-even Kernel Startup Tim
 
 \end{homeworkProblem}
 
+%----------------------------------------------------------------------------------------
+%	Problem 2
+%----------------------------------------------------------------------------------------
+\begin{homeworkProblem}[PCIe Data Movements]
+Im der letzen Teilaufgabe wurden verschiedene Arten von Daten Beweungen getestet. Zunächst ist bei allen ein etwa linearer zuwachst der Dauer mit der Datengröße festzustellen.
+
+Die Kurven für den pinnend memory verlaufen dabei flacher. Das hat als Konsequenz: der Vorteil von pinnend gegenüber pageable memory steigert sich mit der Packetgröße. Dies ist dadurch zu erklären, dass sich erst hier der geordnete Zugriff erst wirklch auszahlen kann, im Gegensatz zu nur sehr kleinen Datenmengen.
+
+Die Abweichung vom Weg H2D zu D2H ist dabei unterschiedlich
+\begin{figure}[htbp]
+\includegraphics[width=\linewidth,
+keepaspectratio]{vergleich}
+\centering
+\end{figure}
+\end{homeworkProblem}
+
+
 \end{document}
