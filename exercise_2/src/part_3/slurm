@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#SBATCH --gres=gpu
+#SBATCH -o job
+./script.sh
