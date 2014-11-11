@@ -5,11 +5,10 @@
 #          Günther Schindler
 #
 CC = nvcc
-CFLAGS = -Wall
+CFLAGS =
 
 globalmemaccess :
-	gcc $(CFLAGS)	src/part_1/globalmemaccess.cu
-			-o matrixmultiply
+	$(CC) -o globalmemaccess src/part_1/globalmemaccess.cu
 
 clean :
 	rm -f 	globalmemaccess
