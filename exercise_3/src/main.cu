@@ -48,7 +48,7 @@ globalMemCoalescedKernel(int *imem_a, int *imem_b, int isize)
     int iNumIntperThread = iNumInt / iNumThreads;
     
     for(int i = id; i < iNumIntperThread; i++)
-      idmem_b[i] = idmem_b[i];
+      imem_b[i] = imem_a[i];
 }
 
 __global__ void 
