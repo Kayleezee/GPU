@@ -33,9 +33,22 @@ void printHelp(char *);
 //
 
 __global__ void 
-globalMemCoalescedKernel(/*TODO Parameters*/)
+globalMemCoalescedKernel(int *imem_a, int *imem_b, int isize)
 {
-    /*TODO Kernel Code*/
+    /* Generate global index */
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    
+    /* Get the number of available threads */
+    int iNumThreads = blockDim.x * gridDim.x;
+    
+    /* Get the number of integers which have to be copied */
+    int iNumInt = isize / sizeof(int);
+    
+    /* Calculate number of integers per thread */
+    int iNumIntperThread = iNumInt / iNumThreads;
+    
+    for(int i = id; i < iNumIntperThread; i++)
+      idmem_b[i] = idmem_b[i];
 }
 
 __global__ void 
@@ -161,6 +174,8 @@ main ( int argc, char * argv[] )
     int* d_memoryA = NULL;
     int* d_memoryB = NULL;
     // Allocation of device memory
+    cudaMalloc(&d_memoryA, static_cast <size_t> (optMemorySize));
+    cudaMalloc(&d_memoryB, static_cast <size_t> (optMemorySize));
 
     if ( !h_memoryA || !h_memoryB || !d_memoryA || !d_memoryB ) {
         std::cout << "\033[31m***" << std::endl
@@ -222,7 +237,7 @@ main ( int argc, char * argv[] )
         //
         if ( chCommandLineGetBool ( "global-coalesced", argc, argv ) ) {
             globalMemCoalescedKernel<<<grid_dim, block_dim, 0 /*Shared Memory Size*/>>>
-                    (/*TODO Parameters*/);
+                    (d_memoryA, d_memoryB, optMemorySize);
         } else if ( chCommandLineGetBool ( "global-stride", argc, argv ) ) {
             globalMemStrideKernel<<<grid_dim, block_dim, 0 /*Shared Memory Size*/>>>
                     (/*TODO Parameters*/);
