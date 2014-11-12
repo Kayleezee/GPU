@@ -47,8 +47,24 @@ globalMemCoalescedKernel(int *imem_a, int *imem_b, int isize)
     /* Calculate number of integers per thread */
     int iNumIntperThread = iNumInt / iNumThreads;
     
-    for(int i = id; i < iNumIntperThread; i++)
-      imem_b[i] = imem_a[i];
+    /* How many integers are left */
+    int iNumIntleft = iNumInt % iNumThreads;
+
+    /* Example: You want to access 13 elements with 4 threads
+     * ADDR 0 1 2 3 4 5 6 7 8 9 10 11 12 13
+     * 
+     * t[0] 0 4 8 12
+     * t[1] 1 5 9 13      <=== should be coalesce
+     * t[2] 2 6 10     
+     * t[3] 3 7 11
+     */
+    /* Check if we have to copy the left integers */
+    if(!id<iNumIntleft)
+      for(int i = id; i < id+iNumIntperThread; i+=iNumThreads)
+        imem_b[i] = imem_a[i];
+    else
+      for(int i = id; i < id+2*iNumIntperThread; i+=iNumThreads)
+        imem_b[i] = imem_a[i];
 }
 
 __global__ void 
