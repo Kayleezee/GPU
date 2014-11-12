@@ -164,11 +164,69 @@
 \newpage
 
 %----------------------------------------------------------------------------------------
+%	Intro
+%----------------------------------------------------------------------------------------
+
+\begin{homeworkProblem}[Intro]
+Auf einem CUDA-Device gibt es verschiedene Arten von Memory mit je unterschiedlichen
+Scope. Die dritten Übung beschäftigt sich mit Global-Memory und dessen Zugriff. 
+Global-Memory verwendet den DRAM des CUDA-Device und kann sowohl von Device als auch 
+von Host verwendet werden.
+\end{homeworkProblem}
+
+%----------------------------------------------------------------------------------------
 %	Global Memory - cuda Memcpy
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem}[Global Memory - cuda Memcpy]
+Als erstes ist die Leistung des Global-Memory-Zugriffs anhand von cudaMemcpy zu testen.
+Es soll ein Programm implementiert werden, welches die Leistung von device-to-device
+von cudaMemcpy misst.
+\\\\
+Folgender Quellcodeauschnitt zeigt die Umsetzung dieser Problemstellung. Das long-Array
+iItaration enthält 13 Werte für die Memory-Größen 1kb bis 1Gb. Anhand dieser Werte werden
+über eine for-Schleife 13 cudaMemcpyDeviceToDevice durchgeführt.
+\begin{lstlisting}{c}
+  ...
+  long iIteration[13] = {1e3, 2e3, 1e4, 2e4, 1e5, 2e5, 1e6, 2e6, 1e7, 2e7, 1e8, 2e8, 5e9};
 
+  /* Run over 13 measurement points */
+  for(i = 0; i < 13; i++)
+  {
+    /* Allocate device memory */
+    cudaMalloc(&dmem_a, iIteration[i]*sizeof(char));
+    cudaMalloc(&dmem_b, iIteration[i]*sizeof(char));
+    ...
+    /* Start timer */
+    chTimerGetTime(&tsStart);
+    /* Start memory copy */
+    cudaMemcpy(dmem_a ,dmem_b , iIteration[i]*sizeof(char), cudaMemcpyDeviceToDevice);
+    /* Stop timer */
+    chTimerGetTime(&tsStop);
+
+    /* Get bandwidth in Byte/sec and print it */
+    dBandwidth=chTimerBandwidth(&tsStart, &tsStop, (double) iIteration[i]);
+
+    /* Free allocated device memory */
+    cudaFree(dmem_a);
+    cudaFree(dmem_b);
+  }
+  ...
+\end{lstlisting}
+Nachfolgend ist der Graph für die Messergebnisse dargestellt. X- und Y-Achse sind
+logarithmisch aufgetragen. Man kann in der logarithmischen darstellung einen linearen
+Verlauf andeuten. Dies deutet auf einen exponentiellen Anstieg der Bandbreite mit
+zunehmender Memory Größe hin.
+\\\\
+Es fällt auf, dass die Messwerte für die Bandbreite sehr den Rahmen der erwarteten
+Ergebnisse sprängen. Es wurde eine Bandbreite von ca. 288 GB/s (GDDR5) erwartet.
+Speziell der letzte Messwert (bei 1Gb) sticht mit einer gemessenen Bandbreite von 
+ca. $ 4 \cdot 10^5 GB$ deutlich hervor.
+\\
+Eine Erklärung wurde hierfür nicht gefunden.
+\begin{center}
+\includegraphics[width=0.7\columnwidth]{../src/part_1/image.png}
+\end{center}
 \end{homeworkProblem}
 \pagebreak
 %----------------------------------------------------------------------------------------
@@ -176,7 +234,35 @@
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem}[Global Memory - coalesced thread access]
-
+Als nächstes soll die Leistung des Device-Memory-Zugriffs vom Thread-Level gemessen werden.
+Es ist ein Kernel zu implementieren der Device-Memory mithilfe von Threads kopiert. Der
+Memory-Zugriff soll coalesce ablaufen.
+\\\\
+Im CUDA-Execution-Model werden Threads in Blöcke gruppiert, welche Multiprozessoren
+zugeordnet werden. Während der Ausführung findet eine feinere Gruppierung der Threads in
+Warps statt. Multiprozessoren auf der GPU führen Instruktionen für jeden Warp in
+SIMD (Single Instruction Multiple Data) Manier aus. Die Warp Größe (praktisch die
+SIMD Breite) ist aktuell für alle CUDA fähigen GPUs 32 Threads.
+\\\\
+Coalesced-Memory-Zugriff bedeutet multiple Memory-Zugriffe in einer einzige Transaktion
+zu kombinieren. So kann auf alle aufeinanderfolgenden 128 Bytes 
+(32 Single Precision Words) Memory von einem Warp (32 fortlaufende Threads) in einer
+einzigen Transaktion zugegriffen werden.
+\\\\
+In unserem Fall wollen wir ein Integer-Array kopieren was bedeutet, dass wir je 
+Warp auf genau 32 Integer-Werte zugreifen können.  
+\\\\
+Der zur Verfügung gestellte Quellcode muss um die Speicherallokation für Device-Memory
+und die Parameterübergabe erweitert werden.
+\begin{lstlisting}{c}
+  // ...
+  cudaMalloc(&d_memoryA, static_cast <size_t> (optMemorySize));
+  cudaMalloc(&d_memoryB, static_cast <size_t> (optMemorySize));
+  // ...
+  globalMemCoalescedKernel<<<grid_dim, block_dim, 0 /*Shared Memory Size*/>>>
+                    (d_memoryA, d_memoryB, optMemorySize);
+  // ...
+\end{lstlisting}
 \end{homeworkProblem}
 \pagebreak
 %----------------------------------------------------------------------------------------
