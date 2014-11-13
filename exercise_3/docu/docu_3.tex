@@ -188,7 +188,7 @@ iItaration enthält 13 Werte für die Memory-Größen 1kb bis 1Gb. Anhand dieser
 über eine for-Schleife 13 cudaMemcpyDeviceToDevice durchgeführt.
 \begin{lstlisting}{c}
   ...
-  long iIteration[13] = {1e3, 2e3, 1e4, 2e4, 1e5, 2e5, 1e6, 2e6, 1e7, 2e7, 1e8, 2e8, 5e9};
+  long iIteration[13] = {1e3, 2e3, 1e4, 2e4, 1e5, 2e5, 1e6, 2e6, 1e7, 2e7, 1e8, 2e8, 1e9};
 
   /* Run over 13 measurement points */
   for(i = 0; i < 13; i++)
@@ -221,14 +221,13 @@ zunehmender Memory Größe hin.
 Es fällt auf, dass die Messwerte für die Bandbreite sehr den Rahmen der erwarteten
 Ergebnisse sprängen. Es wurde eine Bandbreite von ca. 288 GB/s (GDDR5) erwartet.
 Speziell der letzte Messwert (bei 1Gb) sticht mit einer gemessenen Bandbreite von 
-ca. $ 4 \cdot 10^5 GB$ deutlich hervor.
+ca. $ 4 \cdot 10^5 $ GB/s deutlich hervor.
 \\
 Eine Erklärung wurde hierfür nicht gefunden.
 \begin{center}
-\includegraphics[width=0.7\columnwidth]{../src/part_1/image.png}
+\includegraphics[width=0.8\columnwidth]{../src/part_1/image.png}
 \end{center}
 \end{homeworkProblem}
-\pagebreak
 %----------------------------------------------------------------------------------------
 %	Global Memory - coalesced thread access
 %----------------------------------------------------------------------------------------
@@ -247,10 +246,7 @@ SIMD Breite) ist aktuell für alle CUDA fähigen GPUs 32 Threads.
 Coalesced-Memory-Zugriff bedeutet multiple Memory-Zugriffe in einer einzige Transaktion
 zu kombinieren. So kann auf alle aufeinanderfolgenden 128 Bytes 
 (32 Single Precision Words) Memory von einem Warp (32 fortlaufende Threads) in einer
-einzigen Transaktion zugegriffen werden.
-\\\\
-In unserem Fall wollen wir ein Integer-Array kopieren was bedeutet, dass wir je 
-Warp auf genau 32 Integer-Werte zugreifen können.  
+einzigen Transaktion zugegriffen werden. 
 \\\\
 Der zur Verfügung gestellte Quellcode muss um die Speicherallokation für Device-Memory
 und die Parameterübergabe erweitert werden.
@@ -263,6 +259,50 @@ und die Parameterübergabe erweitert werden.
                     (d_memoryA, d_memoryB, optMemorySize);
   // ...
 \end{lstlisting}
+Weiterhin muss der Rumpf des Kernels globalMemCoalescedKernel() implementiert werden.
+Diese Kernel kopiert Device-Memory und verwendet dabei einen Zugriffspattern der
+coalesce ist.
+\begin{lstlisting}{c}
+__global__ void 
+globalMemCoalescedKernel(int *imem_a, int *imem_b, int isize)
+{
+    /* Generate global index */
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    
+    /* Get the number of available threads */
+    int iNumThreads = blockDim.x * gridDim.x;
+    
+    /* Get the number of integers which have to be copied */
+    int iNumInt = isize / sizeof(int);
+    
+    /* Calculate number of integers per thread */
+    int iNumIntperThread = iNumInt / iNumThreads;
+    
+    /* How many integers are left */
+    int iNumIntleft = iNumInt % iNumThreads;
+    
+    /* Check if we have to copy the left integers */
+    if(!id<iNumIntleft)
+      for(int i = id; i < id+iNumIntperThread; i+=iNumThreads)
+        imem_b[i] = imem_a[i];
+    else
+      for(int i = id; i < id+2*iNumIntperThread; i+=iNumThreads)
+        imem_b[i] = imem_a[i];
+}
+\end{lstlisting}
+Nun sollen verschiedene Messungen Anhand des obigen Copy-Kernels vorgenommen werden.
+Es soll ein Thread-Block mit einer variable Anzahl an Threads (zwischen 1 und 1024) und 
+variabler Memory Größe (zwischen 1kb und 1GB) untersucht werden. Das interessierende
+Ergebnis hierbei ist die Bandbreite.
+\\
+Nachfolgendes Bild zeigt diesbezüglich die Ergebnisse. Es zeigt, dass bei nur einem
+Thread-Block die Anzahl der Threads entscheidend ist. Je mehr Threads zur Verfügung stehen
+desto mehr kopier-Operationen können parallel ausgeführt werden. Sind zu wenig Threads
+für zu viele Elemente vorhanden müssen die einzelnen Threads mehrere kopier-Operationen
+durchführen.
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{../src/part_2/image.png}
+\end{center}
 \end{homeworkProblem}
 \pagebreak
 %----------------------------------------------------------------------------------------
@@ -270,7 +310,23 @@ und die Parameterübergabe erweitert werden.
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem}[Global Memory - thread access with stride]
+In dieser Teilaufgabe ist ein Stride in den Zugriffs-Pattern aus der vorherigen Aufgabe
+einzuführen. Dieser Stride verhindert den vortlaufenden Memory-Zugriff und soll die 
+Effekte von coalescing aufzeigen.
+\\\\
+Wieder muss der zur Verfügung gestellte Quellcode erweitert werden. Zunächst müssen die 
+Übergabeparameter in die main-Funktion eingefügt werden.
+\begin{lstlisting}{c}
+  // ...
+  globalMemStrideKernel<<<grid_dim, block_dim, 0 /*Shared Memory Size*/>>>
+                    (d_memoryA, d_memoryB, optMemorySize, optStride);
+  // ...
+\end{lstlisting}
+\begin{lstlisting}{c}
+  // ...
 
+  // ...
+\end{lstlisting}
 \end{homeworkProblem}
 \pagebreak
 %----------------------------------------------------------------------------------------
