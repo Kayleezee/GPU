@@ -168,7 +168,27 @@
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem}[Reading]
+\subsection{NVIDIA TESLA : A UNIFIED GRAPHICS AND COMPUTING ARCHITECTURE}
+The authors Erik Lindholm, John Nickolls, Stuart Oberman and John Montrym discuss in 
+'NVIDIA TESLA : A UNIFIED GRAPHICS AND COMPUTING ARCHITECTURE' the requirements that
+drove the unified graphics and parallel computing processor architecture, describe the 
+Tesla architecture, and how it is enabling widespread deployment of parallel computing 
+and graphics applications. Main reasons for developing the new architecture was to
+enable flexible, programmable graphics and high performance computing. The primary
+goal of this contribution is to introduce the new architecture and their capabilities.
 
+Key insight of the new architecture is the new processor architecture called
+single-instruction, multiple-thread (SIMT), which is similar to single-instruction,
+multiple-data (SIMD) design, but applies one instruction to multiple independent 
+threads in parallel. Due to the new architecture, each streaming multiprocessor 
+is able to execute 24 warps (32 parallel threads). With that a streaming multiprocessor
+manages and executes up to 768 concurrent threads in hardware with zero scheduling
+overhead.
+
+This contribution is more a promotional guide then an objective article about the NVIDIA 
+Tesla architecture. However, the introduced architecture and their capabilities is 
+ground-breaking for the high performance computing. Although the SIMT model needs
+capable programmers and fixed calculation problems to attain success in computing.
 \end{homeworkProblem}
 
 %----------------------------------------------------------------------------------------
