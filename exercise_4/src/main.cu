@@ -33,35 +33,91 @@ void printHelp(char *);
 //
 
 __global__ void 
-globalMem2SharedMem
-//(/*TODO Parameters*/)
-( )
+globalMem2SharedMem(float * d_memoryA, int iSize)
 {
-	/*TODO Kernel Code*/
+  /* Amount of shared memory is determined by host call */
+  extern __shared__ float s_memoryA[];
+  /* Generate global index */
+  int iID = blockDim.x * blockIdx.x + threadIdx.x;
+  /* Get the number of available threads */
+  int iNumThreads = blockDim.x * gridDim.x;
+  /* Calculate offset and elements per thread */
+  int iFrom = (iID * iSize) / iNumThreads;
+  int iTo = ((iID + 1) * iSize) / iNumThreads;
+  int iNumElements = iTo - iFrom;
+  /* Read global memory (coalesce) to shared memory */
+  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+    s_memoryA[i] = d_memoryA[i];
+  /* Thread has completed it's load, so sync! */
+  __syncthreads();
 }
 
 __global__ void 
-SharedMem2globalMem
-//(/*TODO Parameters*/)
-( )
+SharedMem2globalMem(float * d_memoryA, int iSize)
 {
-	/*TODO Kernel Code*/
+  /* Amount of shared memory is determined by host call */
+  extern __shared__ float s_memoryA[];
+  /* Generate global index */
+  int iID = blockDim.x * blockIdx.x + threadIdx.x;
+  /* Get the number of available threads */
+  int iNumThreads = blockDim.x * gridDim.x;
+  /* Calculate offset and elements per thread */
+  int iFrom = (iID * iSize) / iNumThreads;
+  int iTo = ((iID + 1) * iSize) / iNumThreads;
+  int iNumElements = iTo - iFrom;
+  /* Write data from shared memory to global memory (coalesce) */
+  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+    d_memoryA[i] = s_memoryA[i];
+  /* Thread has completed it's load, so sync! */
+  __syncthreads();
 }
 
 __global__ void 
-SharedMem2Registers
-//(/*TODO Parameters*/)
-( )
+SharedMem2Registers(float * outFloat, int iSize)
 {
-	/*TODO Kernel Code*/
+  /* Amount of shared memory is determined by host call */
+  extern __shared__ float s_memoryA[];
+  /* Variable in register */
+  float r_var;
+  /* Generate global index */
+  int iID = blockDim.x * blockIdx.x + threadIdx.x;
+  /* Get the number of available threads */
+  int iNumThreads = blockDim.x * gridDim.x;
+  /* Calculate offset and elements per thread */
+  int iFrom = (iID * iSize) / iNumThreads;
+  int iTo = ((iID + 1) * iSize) / iNumThreads;
+  int iNumElements = iTo - iFrom;
+  /* Conditionally assign register var, so it won't will optimized */
+  if(iID = 0) outFloat = r_var;
+  /* Write data from shared memory to register */
+  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+    r_var = s_memoryA[i];
+  /* Thread has completed it's load, so sync! */
+  __syncthreads();
 }
 
 __global__ void 
-Registers2SharedMem
-//(/*TODO Parameters*/)
-( )
+Registers2SharedMem(float * outFloat, int iSize)
 {
-	/*TODO Kernel Code*/
+  /* Amount of shared memory is determined by host call */
+  extern __shared__ float s_memoryA[];
+  /* Variable in register */
+  float r_var;
+  /* Generate global index */
+  int iID = blockDim.x * blockIdx.x + threadIdx.x;
+  /* Get the number of available threads */
+  int iNumThreads = blockDim.x * gridDim.x;
+  /* Calculate offset and elements per thread */
+  int iFrom = (iID * iSize) / iNumThreads;
+  int iTo = ((iID + 1) * iSize) / iNumThreads;
+  int iNumElements = iTo - iFrom;
+  /* Conditionally assign register var, so it won't will optimized */
+  if(iID = 0) outFloat = r_var;
+  /* Write data from register to shared memory */
+  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+    s_memoryA[i] = r_var;
+  /* Thread has completed it's load, so sync! */
+  __syncthreads();
 }
 
 __global__ void 
@@ -165,6 +221,7 @@ main ( int argc, char * argv[] )
 		exit (-1);
 	}
 	
+	int shared_dim = optMemorySize * sizeof(float);
 	//
 	// Tests
 	//
@@ -177,21 +234,18 @@ main ( int argc, char * argv[] )
 		std::cout << "Starting kernel: " << grid_dim.x << "x" << block_dim.x << " threads, " << optMemorySize << "B shared memory" << ", " << optNumIterations << " iterations" << std::endl;
 		if ( chCommandLineGetBool ( "global2shared", argc, argv ) )
 		{
-			globalMem2SharedMem <<< grid_dim, block_dim, /*Shared Memory Size*/>>>
-					//(/*TODO Parameters*/);
-					( );
+			globalMem2SharedMem <<< grid_dim, block_dim, shared_dim>>>
+					(d_memoryA, optMemorySize);
 		}
 		else if ( chCommandLineGetBool ( "shared2global", argc, argv ) )
 		{
-			SharedMem2globalMem <<< grid_dim, block_dim, /*Shared Memory Size*/>>>
-					//(/*TODO Parameters*/);
-					( );
+			SharedMem2globalMem <<< grid_dim, block_dim, shared_dim>>>
+					(outFloat, optMemorySize);
 		}
 		else if ( chCommandLineGetBool ( "shared2register", argc, argv ) )
 		{
-			SharedMem2Registers <<< grid_dim, block_dim, /*Shared Memory Size*/>>>
-					//(/*TODO Parameters*/);
-					( );
+			SharedMem2Registers <<< grid_dim, block_dim, shared_dim>>>
+					(outFloat, optMemorySize);
 		}
 		else if ( chCommandLineGetBool ( "register2shared", argc, argv ) )
 		{
