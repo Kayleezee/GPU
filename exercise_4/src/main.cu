@@ -216,7 +216,9 @@ main ( int argc, char * argv[] )
 	}
 	
 	int shared_dim = optMemorySize;
-	unsigned long long ullTime;
+        unsigned long long ullTime;
+	unsigned long long *d_ullTime;
+        cudaMalloc(&d_ullTime, sizeof(unsigned long long));
 	//
 	// Tests
 	//
@@ -250,7 +252,8 @@ main ( int argc, char * argv[] )
 		else if ( chCommandLineGetBool ( "shared2register_conflict", argc, argv ) )
 		{
 			bankConflictsRead <<< 1, 32 >>>
-					(outFloat, optStride, &ullTime);
+					(outFloat, optStride, d_ullTime);
+                        cudaMemcpy(&ullTime, d_ullTime, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
 		}
 	}
 
