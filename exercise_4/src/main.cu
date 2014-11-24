@@ -41,15 +41,15 @@ globalMem2SharedMem(float * d_memoryA, int iSize)
   int iID = blockDim.x * blockIdx.x + threadIdx.x;
   /* Get the number of available threads */
   int iNumThreads = blockDim.x * gridDim.x;
+  /* Calculate number of elements */
+  iNumElements = iSize / sizeof(float);
   /* Calculate offset and elements per thread */
-  int iFrom = (iID * iSize) / iNumThreads;
-  int iTo = ((iID + 1) * iSize) / iNumThreads;
-  int iNumElements = iTo - iFrom;
+  int iFrom = (iID * iNumElements) / iNumThreads;
+  int iTo = ((iID + 1) * iNumElements) / iNumThreads;
+  int iNumElementsPerThread = iTo - iFrom;
   /* Read global memory (coalesce) to shared memory */
-  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+  for(int i = iID; i < iNumElements; i += iNumThreads)
     s_memoryA[i] = d_memoryA[i];
-  /* Thread has completed it's load, so sync! */
-  __syncthreads();
 }
 
 __global__ void 
@@ -61,15 +61,15 @@ SharedMem2globalMem(float * d_memoryA, int iSize)
   int iID = blockDim.x * blockIdx.x + threadIdx.x;
   /* Get the number of available threads */
   int iNumThreads = blockDim.x * gridDim.x;
+  /* Calculate number of elements */
+  int iNumElements = iSize / sizeof(float);
   /* Calculate offset and elements per thread */
-  int iFrom = (iID * iSize) / iNumThreads;
-  int iTo = ((iID + 1) * iSize) / iNumThreads;
-  int iNumElements = iTo - iFrom;
-  /* Write data from shared memory to global memory (coalesce) */
-  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+  int iFrom = (iID * iNumElements) / iNumThreads;
+  int iTo = ((iID + 1) * iNumElements) / iNumThreads;
+  int iNumElementsPerThread = iTo - iFrom;
+  /* Read global memory (coalesce) to shared memory */
+  for(int i = iID; i < iNumElements; i += iNumThreads)
     d_memoryA[i] = s_memoryA[i];
-  /* Thread has completed it's load, so sync! */
-  __syncthreads();
 }
 
 __global__ void 
@@ -83,17 +83,17 @@ SharedMem2Registers(float * outFloat, int iSize)
   int iID = blockDim.x * blockIdx.x + threadIdx.x;
   /* Get the number of available threads */
   int iNumThreads = blockDim.x * gridDim.x;
+  /* Calculate number of elements */
+  int iNumElements = iSize / sizeof(float);
   /* Calculate offset and elements per thread */
-  int iFrom = (iID * iSize) / iNumThreads;
-  int iTo = ((iID + 1) * iSize) / iNumThreads;
-  int iNumElements = iTo - iFrom;
-  /* Write data from shared memory to register */
-  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+  int iFrom = (iID * iNumElements) / iNumThreads;
+  int iTo = ((iID + 1) * iNumElements) / iNumThreads;
+  int iNumElementsPerThread = iTo - iFrom;
+  /* Read global memory (coalesce) to shared memory */
+  for(int i = iID; i < iNumElements; i += iNumThreads)
     r_var = s_memoryA[i];
   /* Conditionally assign register var, so it won't will optimized */
   if(iID == 0) outFloat[0] = r_var;
-  /* Thread has completed it's load, so sync! */
-  __syncthreads();
 }
 
 __global__ void 
@@ -107,17 +107,17 @@ Registers2SharedMem(float * outFloat, int iSize)
   int iID = blockDim.x * blockIdx.x + threadIdx.x;
   /* Get the number of available threads */
   int iNumThreads = blockDim.x * gridDim.x;
+  /* Calculate number of elements */
+  int iNumElements = iSize / sizeof(float);
   /* Calculate offset and elements per thread */
-  int iFrom = (iID * iSize) / iNumThreads;
-  int iTo = ((iID + 1) * iSize) / iNumThreads;
-  int iNumElements = iTo - iFrom;
-  /* Write data from register to shared memory */
-  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+  int iFrom = (iID * iNumElements) / iNumThreads;
+  int iTo = ((iID + 1) * iNumElements) / iNumThreads;
+  int iNumElementsPerThread = iTo - iFrom;
+  /* Read global memory (coalesce) to shared memory */
+  for(int i = iID; i < iNumElements; i += iNumThreads)
     s_memoryA[i] = r_var;
   /* Conditionally assign register var, so it won't will optimized */
   if(iID == 0) outFloat[0] = r_var;
-  /* Thread has completed it's load, so sync! */
-  __syncthreads();
 }
 
 __global__ void 
@@ -250,7 +250,7 @@ main ( int argc, char * argv[] )
 		exit (-1);
 	}
 	
-	int shared_dim = optMemorySize * sizeof(float);
+	int shared_dim = optMemorySize;
 	//
 	// Tests
 	//
