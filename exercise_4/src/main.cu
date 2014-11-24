@@ -233,13 +233,13 @@ main ( int argc, char * argv[] )
 	//
 	// Tests
 	//
+	std::cout << "Starting kernel: " << grid_dim.x << "x" << block_dim.x << " threads, " << optMemorySize << "B shared memory" << ", " << optNumIterations << " iterations" << std::endl;
 	kernelTimer.start();
-	//for ( int i = 0; i < optNumIterations; i++ )
+	for ( int i = 0; i < optNumIterations; i++ )
 	{
 		//
 		// Launch Kernel
 		//
-		std::cout << "Starting kernel: " << grid_dim.x << "x" << block_dim.x << " threads, " << optMemorySize << "B shared memory" << ", " << optNumIterations << " iterations" << std::endl;
 		if ( chCommandLineGetBool ( "global2shared", argc, argv ) )
 		{
 			globalMem2SharedMem <<< grid_dim, block_dim, shared_dim>>>
