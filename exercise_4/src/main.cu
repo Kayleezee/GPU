@@ -116,10 +116,10 @@ bankConflictsRead(float * outFloat, int iStride, unsigned long long *ullTime)
   unsigned long long startTime = clock64();
   /* Access data from shared memory to register */
   r_var = s_memoryA[threadIdx.x*iStride];
-  /* Conditionally assign register var, so it won't get optimized */
-  if(iID == 0) outFloat[0] = r_var;
   /* End measure clock cycles */
   *ullTime = clock64() - startTime;
+  /* Conditionally assign register var, so it won't get optimized */
+  if(threadId.x == 0) outFloat[0] = r_var;
 }
 
 //
