@@ -42,11 +42,7 @@ globalMem2SharedMem(float * d_memoryA, int iSize)
   /* Get the number of available threads */
   int iNumThreads = blockDim.x * gridDim.x;
   /* Calculate number of elements */
-  iNumElements = iSize / sizeof(float);
-  /* Calculate offset and elements per thread */
-  int iFrom = (iID * iNumElements) / iNumThreads;
-  int iTo = ((iID + 1) * iNumElements) / iNumThreads;
-  int iNumElementsPerThread = iTo - iFrom;
+  int iNumElements = iSize / sizeof(float);
   /* Read global memory (coalesce) to shared memory */
   for(int i = iID; i < iNumElements; i += iNumThreads)
     s_memoryA[i] = d_memoryA[i];
@@ -63,10 +59,6 @@ SharedMem2globalMem(float * d_memoryA, int iSize)
   int iNumThreads = blockDim.x * gridDim.x;
   /* Calculate number of elements */
   int iNumElements = iSize / sizeof(float);
-  /* Calculate offset and elements per thread */
-  int iFrom = (iID * iNumElements) / iNumThreads;
-  int iTo = ((iID + 1) * iNumElements) / iNumThreads;
-  int iNumElementsPerThread = iTo - iFrom;
   /* Read global memory (coalesce) to shared memory */
   for(int i = iID; i < iNumElements; i += iNumThreads)
     d_memoryA[i] = s_memoryA[i];
@@ -85,10 +77,6 @@ SharedMem2Registers(float * outFloat, int iSize)
   int iNumThreads = blockDim.x * gridDim.x;
   /* Calculate number of elements */
   int iNumElements = iSize / sizeof(float);
-  /* Calculate offset and elements per thread */
-  int iFrom = (iID * iNumElements) / iNumThreads;
-  int iTo = ((iID + 1) * iNumElements) / iNumThreads;
-  int iNumElementsPerThread = iTo - iFrom;
   /* Read global memory (coalesce) to shared memory */
   for(int i = iID; i < iNumElements; i += iNumThreads)
     r_var = s_memoryA[i];
@@ -109,10 +97,6 @@ Registers2SharedMem(float * outFloat, int iSize)
   int iNumThreads = blockDim.x * gridDim.x;
   /* Calculate number of elements */
   int iNumElements = iSize / sizeof(float);
-  /* Calculate offset and elements per thread */
-  int iFrom = (iID * iNumElements) / iNumThreads;
-  int iTo = ((iID + 1) * iNumElements) / iNumThreads;
-  int iNumElementsPerThread = iTo - iFrom;
   /* Read global memory (coalesce) to shared memory */
   for(int i = iID; i < iNumElements; i += iNumThreads)
     s_memoryA[i] = r_var;
@@ -137,24 +121,19 @@ bankConflictsRead(float * outFloat, int iSize, int iStride)
   
   /* Get the number of available threads */
   int iNumThreads = blockDim.x * gridDim.x;
-  
-  /* Calculate offset and elements per thread */
-  int iFrom = (iID * iSize) / iNumThreads;
-  int iTo = ((iID + 1) * iSize) / iNumThreads;
-  int iNumElements = iTo - iFrom;
+  /* Calculate number of elements */
+  int iNumElements = iSize / sizeof(float);
   
   startTime = clock64();
   
   /* Write data from shared memory to register */
-  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+  for(int i = iID; i < iNumElements; i += iNumThreads)
     r_var = s_memoryA[i * iStride];
   /* Conditionally assign register var, so it won't will optimized */
   if(iID == 0) outFloat[0] = r_var;
   
   elapsedTime = clock64() - startTime;
-  
-  /* Thread has completed it's load, so sync! */
-  __syncthreads();
+
 }
 
 //
