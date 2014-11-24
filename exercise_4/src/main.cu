@@ -88,7 +88,7 @@ SharedMem2Registers(float * outFloat, int iSize)
   int iTo = ((iID + 1) * iSize) / iNumThreads;
   int iNumElements = iTo - iFrom;
   /* Conditionally assign register var, so it won't will optimized */
-  if(iID = 0) outFloat = r_var;
+  if(iID == 0) outFloat = &r_var;
   /* Write data from shared memory to register */
   for(int i = iID; i < iID + iNumElements; i += iNumThreads)
     r_var = s_memoryA[i];
@@ -112,7 +112,7 @@ Registers2SharedMem(float * outFloat, int iSize)
   int iTo = ((iID + 1) * iSize) / iNumThreads;
   int iNumElements = iTo - iFrom;
   /* Conditionally assign register var, so it won't will optimized */
-  if(iID = 0) outFloat = r_var;
+  if(iID == 0) outFloat = &r_var;
   /* Write data from register to shared memory */
   for(int i = iID; i < iID + iNumElements; i += iNumThreads)
     s_memoryA[i] = r_var;
@@ -143,7 +143,7 @@ bankConflictsRead(float * outFloat, int iSize, int iStride)
   int iTo = ((iID + 1) * iSize) / iNumThreads;
   int iNumElements = iTo - iFrom;
   /* Conditionally assign register var, so it won't will optimized */
-  if(iID = 0) outFloat = r_var;
+  if(iID == 0) outFloat = &r_var;
   
   startTime = clock64();
   
@@ -270,7 +270,7 @@ main ( int argc, char * argv[] )
 		else if ( chCommandLineGetBool ( "shared2global", argc, argv ) )
 		{
 			SharedMem2globalMem <<< grid_dim, block_dim, shared_dim>>>
-					(outFloat, optMemorySize);
+					(d_memoryA, optMemorySize);
 		}
 		else if ( chCommandLineGetBool ( "shared2register", argc, argv ) )
 		{
@@ -280,14 +280,12 @@ main ( int argc, char * argv[] )
 		else if ( chCommandLineGetBool ( "register2shared", argc, argv ) )
 		{
 			Registers2SharedMem <<< grid_dim, block_dim, /*Shared Memory Size*/>>>
-					//(/*TODO Parameters*/);
-					( );
+					(outFloat, optMemorySize);
 		}
 		else if ( chCommandLineGetBool ( "shared2register_conflict", argc, argv ) )
 		{
 			bankConflictsRead <<< grid_dim, block_dim, /*Shared Memory Size*/ >>>
-					//(/*TODO Parameters*/);
-					( );
+					(outFloat, optMemorySize, optStride);
 		}
 	}
 
