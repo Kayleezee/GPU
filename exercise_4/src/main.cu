@@ -44,6 +44,7 @@ globalMem2SharedMem(float * d_memoryA, int iSize)
   /* Calculate number of elements */
   int iNumElements = iSize / sizeof(float);
   /* Read global memory (coalesce) to shared memory */
+  /* Avoid bank conflicts */
   for(int i = iID; i < iNumElements; i += iNumThreads)
     s_memoryA[i] = d_memoryA[i];
 }
@@ -80,7 +81,7 @@ SharedMem2Registers(float * outFloat, int iSize)
   /* Read global memory (coalesce) to shared memory */
   for(int i = iID; i < iNumElements; i += iNumThreads)
     r_var = s_memoryA[i];
-  /* Conditionally assign register var, so it won't will optimized */
+  /* Conditionally assign register var, so it won't get optimized */
   if(iID == 0) outFloat[0] = r_var;
 }
 
@@ -100,40 +101,25 @@ Registers2SharedMem(float * outFloat, int iSize)
   /* Read global memory (coalesce) to shared memory */
   for(int i = iID; i < iNumElements; i += iNumThreads)
     s_memoryA[i] = r_var;
-  /* Conditionally assign register var, so it won't will optimized */
+  /* Conditionally assign register var, so it won't get optimized */
   if(iID == 0) outFloat[0] = r_var;
 }
 
 __global__ void 
-bankConflictsRead(float * outFloat, int iSize, int iStride)
+bankConflictsRead(float * outFloat, int iStride, unsigned long long *ullTime)
 {
-  
-  long long int startTime, elapsedTime;
-  
-  /* Amount of shared memory is determinde by host call */
-  extern __shared__ float s_memoryA[];
-  
+  /* Static size of shared memory; The size doesn't matters */
+  __shared__ float s_memoryA[1024];
   /* Variable in register */
   float r_var;
-  
-  /* Generate global index */
-  int iID = blockDim.x * blockIdx.x + threadIdx.x;
-  
-  /* Get the number of available threads */
-  int iNumThreads = blockDim.x * gridDim.x;
-  /* Calculate number of elements */
-  int iNumElements = iSize / sizeof(float);
-  
-  startTime = clock64();
-  
-  /* Write data from shared memory to register */
-  for(int i = iID; i < iNumElements; i += iNumThreads)
-    r_var = s_memoryA[i * iStride];
-  /* Conditionally assign register var, so it won't will optimized */
+  /* Start measure clock cycles */
+  unsigned long long startTime = clock64();
+  /* Access data from shared memory to register */
+  r_var = s_memoryA[threadIdx.x*iStride];
+  /* Conditionally assign register var, so it won't get optimized */
   if(iID == 0) outFloat[0] = r_var;
-  
-  elapsedTime = clock64() - startTime;
-
+  /* End measure clock cycles */
+  *ullTime = clock64() - startTime;
 }
 
 //
@@ -230,6 +216,7 @@ main ( int argc, char * argv[] )
 	}
 	
 	int shared_dim = optMemorySize;
+	unsigned long long ullTime;
 	//
 	// Tests
 	//
@@ -262,8 +249,8 @@ main ( int argc, char * argv[] )
 		}
 		else if ( chCommandLineGetBool ( "shared2register_conflict", argc, argv ) )
 		{
-			bankConflictsRead <<< grid_dim, block_dim,  shared_dim >>>
-					(outFloat, optMemorySize, optStride);
+			bankConflictsRead <<< 1, 32 >>>
+					(outFloat, optStride, &ullTime);
 		}
 	}
 
@@ -321,9 +308,9 @@ main ( int argc, char * argv[] )
 			}
 		}	
 
-		std::cout << "Shared memory bank conflict test, size=" << std::setw(10) << optMemorySize << ", gDim=" << std::setw(5) << grid_dim.x << ", bDim=" << std::setw(5) << block_dim.x;
+		std::cout << "Shared memory bank conflict test, size=1024, gDim=1, bDim=32"; // << std::setw(10) << optMemorySize << ", gDim=" << std::setw(5) << grid_dim.x << ", bDim=" << std::setw(5) << block_dim.x;
 		std::cout << ", stride=" << std::setw(6) << optStride << ", modulo=" << std::setw(6) << optModulo;
-		std::cout << ", clocks=" << std::setw(10) << hClocks << std::endl;
+		std::cout << ", clocks=" << std::setw(10) << ullTime << std::endl; //hClocks << std::endl;
 	}
 	
 	return 0;
