@@ -121,11 +121,41 @@ Registers2SharedMem(float * outFloat, int iSize)
 }
 
 __global__ void 
-bankConflictsRead
-//(/*TODO Parameters*/)
-( )
+bankConflictsRead(float * outFloat, int iSize, int iStride)
 {
-	/*TODO Kernel Code*/
+  
+  long long int startTime, elapsedTime;
+  
+  /* Amount of shared memory is determinde by host call */
+  extern __shared__ float s_memoryA[];
+  
+  /* Variable in register */
+  float r_var;
+  
+  /* Generate global index */
+  int iID = blockDim.x * blockIdx.x + threadIdx.x;
+  
+  /* Get the number of available threads */
+  int iNumThreads = blockDim.x * gridDim.x;
+  
+  /* Calculate offset and elements per thread */
+  int iFrom = (iID * iSize) / iNumThreads;
+  int iTo = ((iID + 1) * iSize) / iNumThreads;
+  int iNumElements = iTo - iFrom;
+  /* Conditionally assign register var, so it won't will optimized */
+  if(iID = 0) outFloat = r_var;
+  
+  startTime = clock64();
+  
+  /* Write data from shared memory to register */
+  for(int i = iID; i < iID + iNumElements; i += iNumThreads)
+    r_var = s_memoryA[i * iStride];
+  
+  
+  elapsedTime = clock64() - startTime;
+  
+  /* Thread has completed it's load, so sync! */
+  __syncthreads();
 }
 
 //
