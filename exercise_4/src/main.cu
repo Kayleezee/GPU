@@ -108,8 +108,8 @@ Registers2SharedMem(float * outFloat, int iSize)
 __global__ void 
 bankConflictsRead(float * outFloat, int iStride, unsigned long long *ullTime)
 {
-  /* Static size of shared memory; The size doesn't matters */
-  __shared__ float s_memoryA[1024];
+  /* Static size of shared memory */
+  __shared__ float s_memoryA[2024];
   /* Variable in register */
   float r_var;
   /* Start measure clock cycles */
