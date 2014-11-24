@@ -87,11 +87,11 @@ SharedMem2Registers(float * outFloat, int iSize)
   int iFrom = (iID * iSize) / iNumThreads;
   int iTo = ((iID + 1) * iSize) / iNumThreads;
   int iNumElements = iTo - iFrom;
-  /* Conditionally assign register var, so it won't will optimized */
-  if(iID == 0) outFloat = &r_var;
   /* Write data from shared memory to register */
   for(int i = iID; i < iID + iNumElements; i += iNumThreads)
     r_var = s_memoryA[i];
+  /* Conditionally assign register var, so it won't will optimized */
+  if(iID == 0) outFloat[0] = r_var;
   /* Thread has completed it's load, so sync! */
   __syncthreads();
 }
@@ -111,11 +111,11 @@ Registers2SharedMem(float * outFloat, int iSize)
   int iFrom = (iID * iSize) / iNumThreads;
   int iTo = ((iID + 1) * iSize) / iNumThreads;
   int iNumElements = iTo - iFrom;
-  /* Conditionally assign register var, so it won't will optimized */
-  if(iID == 0) outFloat = &r_var;
   /* Write data from register to shared memory */
   for(int i = iID; i < iID + iNumElements; i += iNumThreads)
     s_memoryA[i] = r_var;
+  /* Conditionally assign register var, so it won't will optimized */
+  if(iID == 0) outFloat[0] = r_var;
   /* Thread has completed it's load, so sync! */
   __syncthreads();
 }
@@ -142,15 +142,14 @@ bankConflictsRead(float * outFloat, int iSize, int iStride)
   int iFrom = (iID * iSize) / iNumThreads;
   int iTo = ((iID + 1) * iSize) / iNumThreads;
   int iNumElements = iTo - iFrom;
-  /* Conditionally assign register var, so it won't will optimized */
-  if(iID == 0) outFloat = &r_var;
   
   startTime = clock64();
   
   /* Write data from shared memory to register */
   for(int i = iID; i < iID + iNumElements; i += iNumThreads)
     r_var = s_memoryA[i * iStride];
-  
+  /* Conditionally assign register var, so it won't will optimized */
+  if(iID == 0) outFloat[0] = r_var;
   
   elapsedTime = clock64() - startTime;
   
@@ -279,12 +278,12 @@ main ( int argc, char * argv[] )
 		}
 		else if ( chCommandLineGetBool ( "register2shared", argc, argv ) )
 		{
-			Registers2SharedMem <<< grid_dim, block_dim, /*Shared Memory Size*/>>>
+			Registers2SharedMem <<< grid_dim, block_dim,  shared_dim>>>
 					(outFloat, optMemorySize);
 		}
 		else if ( chCommandLineGetBool ( "shared2register_conflict", argc, argv ) )
 		{
-			bankConflictsRead <<< grid_dim, block_dim, /*Shared Memory Size*/ >>>
+			bankConflictsRead <<< grid_dim, block_dim,  shared_dim >>>
 					(outFloat, optMemorySize, optStride);
 		}
 	}
