@@ -119,7 +119,7 @@ bankConflictsRead(float * outFloat, int iStride, unsigned long long *ullTime)
   /* End measure clock cycles */
   *ullTime = clock64() - startTime;
   /* Conditionally assign register var, so it won't get optimized */
-  if(threadId.x == 0) outFloat[0] = r_var;
+  if(threadIdx.x == 0) outFloat[0] = r_var;
 }
 
 //
