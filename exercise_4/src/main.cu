@@ -17,6 +17,10 @@
 #include <chTimer.hpp>
 #include <stdio.h>
 #include <assert.h>
+#include <fstream>
+
+using namespace std;
+
 
 const static int DEFAULT_MEM_SIZE       = 10*1024*1024; // 10 MB
 const static int DEFAULT_NUM_ITERATIONS =         1000;
@@ -280,6 +284,10 @@ main ( int argc, char * argv[] )
 		//std::cout << ", time=" << kernelTimer.getTime(optNumIterations) << 
 		std::cout.precision ( 2 );
 		std::cout << ", bw=" << std::fixed << std::setw(6) << ( optMemorySize * grid_dim.x ) / kernelTimer.getTime(optNumIterations) / (1E09) << "GB/s" << std::endl;
+                ofstream mesfile;
+                mesfile.open ("global2shared_b" << block_dim.x << "_g" << grid_dim.x << ".dat");
+                mesfile << optMemorySize << " " << << std::fixed << std::setw(6) << ( optMemorySize * grid_dim.x ) / kernelTimer.getTime(optNumIterations) / (1E09) << std::endl;
+                mesfile.close();
 	}
 	
 	if ( chCommandLineGetBool ( "shared2global", argc, argv ) ) {
