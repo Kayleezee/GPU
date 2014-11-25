@@ -201,9 +201,55 @@ capable programmers and fixed calculation problems to attain success in computin
 %----------------------------------------------------------------------------------------
 %	Shared Memory Analysis - Conflicts
 %----------------------------------------------------------------------------------------
-
 \begin{homeworkProblem}[Shared Memory Analysis - Conflicts]
+Folgender Kernel lädt Daten von Shared Memory in das Thread-lokale Register. Jeder
+Thread operiert genau auf einem Element vom Typ float. Die Zeit, bzw. die Taktzyklen, 
+werden mit der clock64() funktion ermittelt. Für die Messungen werden 32 Threads per 
+Block verwendet. Dies entspricht der Anzahl an Threads die in einer Gruppe 
+zusammengefasst, gleichzeitig ausgeführt werden und dient somit am bestern der Analyse
+der Bank Conflicts. Da multiple Thread-Blöcke auch ihre eigenen Shared Memory Bereiche
+hervorrufen wird hier auch nur mit einem Thread-Block analysiert.
+\begin{lstlisting}{c}
+__global__ void 
+bankConflictsRead(float * outFloat, int iStride, unsigned long long *ullTime)
+{
+  /* Static size of shared memory */
+  __shared__ float s_memoryA[2024];
+  /* Variable in register */
+  float r_var;
+  /* Start measure clock cycles */
+  unsigned long long startTime = clock64();
+  /* Access data from shared memory to register */
+  r_var = s_memoryA[threadIdx.x*iStride];
+  /* End measure clock cycles */
+  *ullTime = clock64() - startTime;
+  /* Conditionally assign register var, so it wont get optimized */
+  if(threadIdx.x == 0) outFloat[0] = r_var;
+}
+int main()
+{
+  bankConflictsRead <<< 1, 32 >>> (outFloat, optStride, d_ullTime);
+}
+\end{lstlisting}
+Shared Memory ist in verschiedene Bänke unterteilt. Jede dieser Bänke kann nur einen
+Zugriff auf einmal verarbeiten. Wird innerhalb einer Warp Ausführung mehrmals auf eine 
+Bank zugegriffen, wird der Zugriff serialisiert und benötigt somit mehr Zeit.
 
+Folgender Plot zeigt die benötigte Clock Anzahl in Abhänigkeit von dem verwendeten
+Stride. 
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{conflicts.png}
+\end{center}
+
+Der Plot verdeutlicht, dass der Zugriff nur dann konfliktfrei abläuft, wenn der Stride
+keinen gemeinsamen Teiler mit der Bankanzahl besitzt. So müssen bei einem Stride von 
+2, 6, 10, 14, etc. zwei Zugriffe serialisert werden. Bei einem Stride 4, 12, 20, etc.
+müssen vier Zugriffe serialisiert werden. Dieser Trend setzt sich bis zu einem Stride
+von 32 fort, wobei alle 32 Zugriffe serialisert werden müssen.
+
+Übersteigt der Stride die Anzahl von 32 fängt der Trend wieder von vorne an. Dies 
+bedeutet, dass ein ganzes vielfaches der Bankanzahl erreicht ist und somit Shared
+Memory in 32 Bänke unterteilt ist.
 \end{homeworkProblem}
 
 %----------------------------------------------------------------------------------------
