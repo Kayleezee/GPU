@@ -106,7 +106,7 @@ Registers2SharedMem(float * outFloat, int iSize)
 }
 
 __global__ void 
-bankConflictsRead(float * outFloat, int iStride, unsigned long long *ullTime)
+bankConflictsRead(float *outFloat, int iStride, unsigned long long *ullTime)
 {
   /* Static size of shared memory */
   __shared__ float s_memoryA[2024];
@@ -216,7 +216,8 @@ main ( int argc, char * argv[] )
 	}
 	
 	int shared_dim = optMemorySize;
-        unsigned long long ullTime;
+        unsigned long long ullTime = 0.0;
+        unsigned long long ullTime_it = 0.0;
 	unsigned long long *d_ullTime;
         cudaMalloc(&d_ullTime, sizeof(unsigned long long));
 	//
@@ -253,10 +254,10 @@ main ( int argc, char * argv[] )
 		{
 			bankConflictsRead <<< 1, 32 >>>
 					(outFloat, optStride, d_ullTime);
-                        cudaMemcpy(&ullTime, d_ullTime, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
+			cudaMemcpy(&ullTime_it, d_ullTime, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
+                        ullTime += ullTime_it;
 		}
 	}
-
 	// Mandatory synchronize after all kernel launches
 	cudaDeviceSynchronize();
 	kernelTimer.stop();
@@ -313,7 +314,7 @@ main ( int argc, char * argv[] )
 
 		std::cout << "Shared memory bank conflict test, size=1024, gDim=1, bDim=32"; // << std::setw(10) << optMemorySize << ", gDim=" << std::setw(5) << grid_dim.x << ", bDim=" << std::setw(5) << block_dim.x;
 		std::cout << ", stride=" << std::setw(6) << optStride << ", modulo=" << std::setw(6) << optModulo;
-		std::cout << ", clocks=" << std::setw(10) << ullTime << std::endl; //hClocks << std::endl;
+		std::cout << ", clocks=" << std::setw(10) << ullTime / optNumIterations << std::endl; //hClocks << std::endl;
 	}
 	
 	return 0;
