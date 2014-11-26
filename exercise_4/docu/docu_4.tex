@@ -189,6 +189,19 @@ This contribution is more a promotional guide then an objective article about th
 Tesla architecture. However, the introduced architecture and their capabilities is 
 ground-breaking for the high performance computing. Although the SIMT model needs
 capable programmers and fixed calculation problems to attain success in computing.
+
+\subsection{Debunking the 100X GPU vs. CPU Myth}
+In this paper the author wants to verify wether the use of a GPU on throuphut computing with large amount of data-level parallislm results in a substanable speedup of 10X up to 100X compared to the use of a CPU.
+ To acheive that he compares the perfomance of the Nvidia GTX280 GPU and a Intel Core i7-960 CPU on different workloads.
+  He recognizes a speed-up that is heavily depending of the  current workload, but in average the GPU shows a speed-up of only about 2.5X, so markebly lower than the prediction of other papers.
+
+His first reason for this is that you have to make sure you compare your probably optimized GPU code with an also opimized CPU-version.
+Thereby also the different possibilities of opimising on CPUs (multithreading & cache blocking) and GPUs (minimizing global synchronization & using local shared buffers) are discussed.
+His second reason is that you also use compareble hardware components, so not compare e.g. a high performance
+GPU to a mobile CPU. 
+The violation of both could leed to the predicted optimistic speed-ups. 
+
+Over all the argumentation of the author, why the predicted speed-up  of 10-1000X is very much lower, is quite reasonable, but as a reader it is hard to believe that all the other papers are neglegting his rules of 'compare equal to equal' in such a hefty way, since this should actually be clear as a rule.
 \end{homeworkProblem}
 
 %----------------------------------------------------------------------------------------
