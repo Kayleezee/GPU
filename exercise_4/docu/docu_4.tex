@@ -131,7 +131,7 @@
 \newcommand{\hmwkClass}{GPU Computing} % Course/class
 \newcommand{\hmwkClassTime}{} % Class/lecture time
 \newcommand{\hmwkClassInstructor}{} % Teacher/lecturer
-\newcommand{\hmwkAuthorName}{Günther Schindler, Alexander Schapp, Klaus Naumann} % Your name
+\newcommand{\hmwkAuthorName}{Günther Schindler, Alexander Schnapp, Klaus Naumann} % Your name
 
 %----------------------------------------------------------------------------------------
 %	TITLE PAGE
@@ -270,7 +270,85 @@ Memory in 32 Bänke unterteilt ist.
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem}[Matrix Multiply – CPU sequential version]
+\subsection{Verify results}
+In dem letzten Teil von Übung 4 wurde eine sequentielle Variante der Matrix-Multiplikation implementiert. Die Matrizen enthalten Werte des Datentyps \textit{double}.
+Die Ergebnismatrix C enthält - für einen Input mit 5x5 Elementen - nach dem Ausführen der Matrix-Multiplikation folgende Werte:
+ \begin{center}
+\begin{tabular}{ |c|c|c|c|c|c| } 
+\hline
+\hline
+C[i,j] & C[,0] & C[,1] & C[,2] & C[,3] & C[,4] \\
+\hline
+C[0,] & 0 & 30 & 60 & 90 & 120 \\ 
+\hline
+C[1,] & 0 & 40 & 80 & 120 & 160 \\ 
+\hline
+C[2,] & 0 & 50 & 100 & 150 & 200 \\ 
+\hline
+C[3,] & 0 & 60 & 120 & 180 & 240 \\
+\hline
+C[4,] & 0 & 70 & 140 & 210 & 280 \\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\subsection{Run time}
+In der nächsten Tabelle sind die Ausführungszeiten in Abhängigkeit der Matrixdimensionen dargestellt. Die Messungen wurden hierbei mit \textit{getTimeOfDay()} durchgeführt:
+\begin{lstlisting}{c}
+/* Start time-measurement */
+double dstartMeasurement(void)
+{
+  struct timeval tim;
+  gettimeofday(&tim, NULL);
+  return tim.tv_sec+(tim.tv_usec/1000000.0);
+}
 
+/* Stop time-measurement */
+double dstopMeasurement(double dStartTime)
+{
+  struct timeval tim;
+  gettimeofday(&tim, NULL);
+  return (tim.tv_sec+(tim.tv_usec/1000000.0)) - dStartTime;
+}
+\end{lstlisting}
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c|c| } 
+\hline
+\hline
+Size & Time[s] \\
+\hline
+16 & 0.000025 \\ 
+\hline
+32 & 0.000192 \\ 
+\hline
+64 & 0.001518 \\ 
+\hline
+128 & 0.012200 \\
+\hline
+256 & 0.103475 \\
+\hline
+512 & 0.948771 \\
+\hline
+1024 & 9.688985 \\
+\hline
+2048 & 122.3314 \\
+\hline
+4096 & 1115.690 \\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\begin{center}
+\includegraphics[width=0.7\columnwidth]{matrix_multiply.png}
+\end{center}
+Betrachtet man den Graphen der Ausführungszeiten und die dazugehörige Tabelle, stellt man fest, dass die Ausführungszeit in Abhängigkeit zu der Matrixgröße ansteigt. Bei jeder Verdopplung der Matrixgröße steigt die Ausführungszeit um einen Faktor von ca. 10. Ab einer gewissen Größe ist die Matrixgröße zu groß für den Cache und müssen somit in den Arbeitsspeicher geladen werden. Im Vergleich zum Cache ist die Übertragungszeit und der Arbeitsspeicher selbst erheblich langsamer und somit steigt die Zeit der Berechnung rapide an.
+\subsection{GFLOP/s}
+In der Aufgabe wurden quadratische Matrizen verwendet, wobei bei jeder Schleife 2 floating point Operationen druchgeführt werden. Daraus ergibt sich folgender Grad: 
+\\${\mathcal O (2*n^3)}$. \\
+Als Beispiel betrachten wir eine Matrixgröße von 1024 x 1024:
+\\${\mathcal O (2*1024^3)}$. \\
+Dies ergibt ca. \textit{2.147 GFLOP} welche durch die Ausführungszeit (siehe Tabelle) geteilt werden und somit \textit{2.217 MFLOP/s}.
+Der theoretische \textit{Peek} der Prozessoren der creek-Server liegt jedoch weit höher. Diese Differenz ergibt sich durch die Matrixgröße und des bereits erwähnten langsameren Geschwindkeit des Arbeitsspeichers.
 \end{homeworkProblem}
 \pagebreak
 \end{document}
