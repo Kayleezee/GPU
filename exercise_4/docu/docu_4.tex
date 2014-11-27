@@ -196,20 +196,62 @@ In this paper the author wants to verify wether the use of a GPU on throuphut co
   He recognizes a speed-up that is heavily depending of the  current workload, but in average the GPU shows a speed-up of only about 2.5X, so markebly lower than the prediction of other papers.
 
 His first reason for this is that you have to make sure you compare your probably optimized GPU code with an also opimized CPU-version.
-Thereby also the different possibilities of opimising on CPUs (multithreading & cache blocking) and GPUs (minimizing global synchronization & using local shared buffers) are discussed.
+Thereby also the different possibilities of opimising on CPUs (multithreading \& cache blocking) and GPUs (minimizing global synchronization \& using local shared buffers) are discussed.
 His second reason is that you also use compareble hardware components, so not compare e.g. a high performance
 GPU to a mobile CPU. 
 The violation of both could leed to the predicted optimistic speed-ups. 
 
 Over all the argumentation of the author, why the predicted speed-up  of 10-1000X is very much lower, is quite reasonable, but as a reader it is hard to believe that all the other papers are neglegting his rules of 'compare equal to equal' in such a hefty way, since this should actually be clear as a rule.
 \end{homeworkProblem}
-
+\pagebreak
 %----------------------------------------------------------------------------------------
 %	Shared Memory Analysis - Basics
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem}[Shared Memory Analysis - Basics]
+Für die Analyse des Shared Memory wurde Daten von Global Memory in das Shared Memory
+und umgekehrt kopiert. Für die Testreihen wurden zunächst nur ein Thread-Block verwendet.
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{glob2share.png}
+\end{center}
+Beim Kopieren von Global Memory zu Shared Memory hängt der Durchsatz stark von der
+verwendeten Threadanzahl ab. Selbst ab einer Threadanzahl von 512 sieht man noch
+eine deutliche Steigerung des Durchsatzes.
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{share2glob.png}
+\end{center}
+Beim Lesen aus dem Shared Memory in das Global Memory wird der maximale Durchsatz
+beinahe ab einer Thradanzahl von 512 erreicht. Für eine höhere Threadanzahl bleibt
+der Durchsatz konstant.
 
+Die Kombination von 768 Threads per Block und einer Blockanzahl von 14 erreicht bei 
+einer Problemgröße von 49k Byte einen maximalen Durchsatz von etwa 24 GB/s.
+\\\\
+Für das Lesen aus dem Shared Memory in den Register und umgekehrt wurden ebenfalls
+zunächst bei nur einem Threadblock die Threadanzahl variiert.
+
+Beim Lesen aus dem Shared Memory wird ein Durchsatz von fast 16 GB/s erreicht, was
+eine deutliche Steigerung im Vergleich zum Global Memory aufzeigt. Dieser Durchsatz
+wird ab einer Threadanzahl von 512 erreicht. Danach bleibt der Durchsatz beinahe
+konstant.
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{share2reg.png}
+\end{center}
+Wird von dem Register in das Shared Memory kopiert sieht der Verlauf relativ
+identisch aus. Der maximale Durchsatz beträgt hier 15 GB/s. 
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{reg2share.png}
+\end{center}
+Beim variieren der Thread und Blockanzahl wird ebenfalls (wie bei global to shared)
+ein maximaler Durchsatz von 24 GB/s bei einer Threadanzahl von 512 und einer
+Blockanzahl von 7 erreicht.
+\\\\
+Schlussfolgernd lässt sich sagen, dass der Lese- und Schreibezugriff zu Shared Memory
+deutlich schneller ist als zu Lese- und Schreibezugriff (bei einem Block). Werden 
+mehrere Blöcke eingesetzt erreicht wird ein identischer Durchsatz von 24 GB/s für beide
+Memory Typen erreicht. Jedoch wird dieser bei Shared Memory bei geringer Threadanzahl
+und Blockanzahl erreicht. Dies lässt vermuten, dass mit steigender Problemgröße der
+Unterschied zwischen den Durchsätzen noch deutlicher zu sehen ist.
 \end{homeworkProblem}
 %----------------------------------------------------------------------------------------
 %	Shared Memory Analysis - Conflicts
@@ -244,6 +286,7 @@ int main()
   bankConflictsRead <<< 1, 32 >>> (outFloat, optStride, d_ullTime);
 }
 \end{lstlisting}
+
 Shared Memory ist in verschiedene Bänke unterteilt. Jede dieser Bänke kann nur einen
 Zugriff auf einmal verarbeiten. Wird innerhalb einer Warp Ausführung mehrmals auf eine 
 Bank zugegriffen, wird der Zugriff serialisiert und benötigt somit mehr Zeit.
