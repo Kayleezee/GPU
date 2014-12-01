@@ -33,18 +33,23 @@ void printHelp(char * /*programName*/);
 __global__ void
 matMul_Kernel(int matrixSize, float* matrixA, float* matrixB, float* matrixC)
 {
+    float fElementSum, fXelement, fYelement;
+  
     int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
     int elementIdy = blockIdx.y * blockDim.y + threadIdx.y;
 
     int elementId = elementIdy * matrixSize + elementIdx;
 
     if (elementIdx < matrixSize && elementIdy < matrixSize) {
-	float element_sum = 0.f;
+	element_sum = 0.f;
 	for(int i = 0; i < matrixSize; ++i) {
-	    element_sum += matrixA[elementIdx * matrixSize + i] * matrixB[i * matrixSize + elementIdy];
+	    fXelement = matrixA[elementIdx * matrixSize + i];
+	    fYelement = matrixB[i * matrixSize + elementIdy];
+	    
+	    fElementSum += fXelement * fYelement;
 	}
 	
-	matrixC[elementIdx * matrixSize + elementIdy] = element_sum;
+	matrixC[elementIdx * matrixSize + elementIdy] = fElementSum;
     }
 }
 
