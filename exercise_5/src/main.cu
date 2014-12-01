@@ -61,7 +61,7 @@ shMatMul_Kernel(int matrixSize, float* matrixA, float* matrixB, float* matrixC)
 {
     extern __shared__ float sh_Mem[];
     float sh_MatrixA = &(sh_Mem[0]);
-    float sh_MatrixB = &(sh_Mem[1 /*TODO Calc offset*/]);
+    float sh_MatrixB = &(sh_Mem[1 + ]);
     float sh_MatrixC = &(sh_Mem[2 /*TODO Calc offset*/]);
 
     int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -69,8 +69,7 @@ shMatMul_Kernel(int matrixSize, float* matrixA, float* matrixB, float* matrixC)
 
     int elementId = elementIdy * matrixSize + elementIdx;
 
-    if (elementIdx < matrixSize && 
-        elementIdy < matrixSize) {
+    if (elementIdx < matrixSize && elementIdy < matrixSize) {
         /*TODO Kernel Code*/
     }
 }
@@ -213,7 +212,7 @@ main(int argc, char * argv[])
               << "***" << std::endl;
 
     // TODO Calc shared mem size
-    int sharedMemSize = 0;
+    int sharedMemSize = 3 * blockSize * blockSize * sizeof(float);
 
     kernelTimer.start();
 
