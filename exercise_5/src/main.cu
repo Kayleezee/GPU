@@ -38,10 +38,11 @@ matMul_Kernel(int matrixSize, float* matrixA, float* matrixB, float* matrixC)
     int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
     int elementIdy = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int elementId = elementIdy * matrixSize + elementIdx;
+    //int elementId = elementIdy * matrixSize + elementIdx;
+    int elementId = elementIdx * matrixSize + elementIdy;
 
     if (elementIdx < matrixSize && elementIdy < matrixSize) {
-	element_sum = 0.f;
+	fElementSum = 0.f;
 	for(int i = 0; i < matrixSize; ++i) {
 	    fXelement = matrixA[elementIdx * matrixSize + i];
 	    fYelement = matrixB[i * matrixSize + elementIdy];
@@ -49,7 +50,7 @@ matMul_Kernel(int matrixSize, float* matrixA, float* matrixB, float* matrixC)
 	    fElementSum += fXelement * fYelement;
 	}
 	
-	matrixC[elementIdx * matrixSize + elementIdy] = fElementSum;
+	matrixC[elementId] = fElementSum;
     }
 }
 
@@ -60,18 +61,18 @@ __global__ void
 shMatMul_Kernel(int matrixSize, float* matrixA, float* matrixB, float* matrixC)
 {
     extern __shared__ float sh_Mem[];
-    float sh_MatrixA = &(sh_Mem[0]);
-    float sh_MatrixB = &(sh_Mem[1 + ]);
-    float sh_MatrixC = &(sh_Mem[2 /*TODO Calc offset*/]);
+    //float sh_MatrixA = &(sh_Mem[0]);
+    //float sh_MatrixB = &(sh_Mem[1 + ]);
+    //float sh_MatrixC = &(sh_Mem[2 /*TODO Calc offset*/]);
 
-    int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
-    int elementIdy = blockIdx.y * blockDim.y + threadIdx.y;
+    //int elementIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    //int elementIdy = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int elementId = elementIdy * matrixSize + elementIdx;
+    //int elementId = elementIdy * matrixSize + elementIdx;
 
-    if (elementIdx < matrixSize && elementIdy < matrixSize) {
+    //if (elementIdx < matrixSize && elementIdy < matrixSize) {
         /*TODO Kernel Code*/
-    }
+    //}
 }
 //
 // Main
@@ -218,8 +219,11 @@ main(int argc, char * argv[])
 
     //
     // Launch Kernel
-    //
-    if (chCommandLineGetBool("shared", argc, argv)) {
+    // FIX: option '-shared' calculates now the shared version,
+    //      devault: calcutates the device memory version
+    // 
+    if (!chCommandLineGetBool("shared", argc, argv)) {
+        //std::cout << "calculating naive version\n";
         matMul_Kernel<<<grid_dim, block_dim>>>(matrixWidth, d_matrixA, d_matrixB, d_matrixC);
     } else {
         shMatMul_Kernel<<<grid_dim, block_dim, sharedMemSize>>>(matrixWidth, d_matrixA, d_matrixB, d_matrixC);
