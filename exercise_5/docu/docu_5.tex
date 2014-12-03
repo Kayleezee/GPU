@@ -206,15 +206,34 @@ Speed-Up von bis zu 33 erzielt werden.
 %	Matrix Multiply – GPU version using shared memory
 %----------------------------------------------------------------------------------------
 \begin{homeworkProblem}[Matrix Multiply – GPU version using shared memory]
+Als nächstes ist die naive CUDA Version so zu erweitern, dass diese den Shared
+Memory eines jeden Streaming Multiprocessors ausnutzt. Es ist wieder der
+optimale Wert für die tpb zu ermitteln. Nachfolgender Plot zeigt die
+Ausführungszeit für eine 2048x2048 Matrix in Abhängigkeit von den verwendeten
+tpb.
 \begin{center}
 \includegraphics[width=0.8\columnwidth]{var_tpb.png}
 \end{center}
+Die Grafik zeigt, dass mit steigender Anzahl von tpb auch die Ausführungszeit
+sinkt. Somit ist der optimale Wert für die tpb 32.
+
+Mit dieser Anzahl an tpb wurde wieder die gesamte Ausführungszeit sowie die einzelnen
+Ausführungszeiten für den host-to-device Datentransfer, device-to-host Datentransfer
+und die Kernel Ausführung für verschiedene Problemgrößen gemessen. Nachfolgender 
+Plot zeigt entsprechende Ergebnisse.
 \begin{center}
 \includegraphics[width=0.8\columnwidth]{shmatmul.png}
 \end{center}
+Die abschließende Grafik zeigt noch den erreichten Speed-Up verglichen mit der CPU 
+und der Global Memory Version und mit bzw. ohne Datentransfer, abhängig von der
+Problemgröße.
 \begin{center}
 \includegraphics[width=0.8\columnwidth]{speed-up_sh.png}
 \end{center}
+Obwohl sich die Ausführungszeiten der Matrix-Multiplikation zwischen Global und 
+Shared Memory wenig unterscheiden, konnte hier ein Speed-Up von knapp 3 
+erreicht werden. Bezüglich der CPU Version konnte ein maximaler Speed-Up von
+bis zu 70 erreicht werden.
 \end{homeworkProblem}
 \pagebreak
 \end{document}
