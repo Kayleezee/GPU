@@ -108,7 +108,7 @@ main(int argc, char * argv[])
               << "***" << std::endl;
 
     ChTimer memCpyH2DTimer, memCpyD2HTimer;
-    ChTimer kernelTimer;
+    ChTimer kernelTimer, hostTimer;
 
     //
     // Allocate Memory
@@ -279,9 +279,10 @@ main(int argc, char * argv[])
     if (!dontCheckResult) {
         float* h_matrixD = static_cast<float*>(
                 calloc(static_cast<size_t>(matrixSize), sizeof(*h_matrixD)));
-
+        hostTimer.start();
         MatrixMulOnHostBlocked(h_matrixA, h_matrixB, h_matrixD, 
                 static_cast<long>(matrixWidth), 32);
+        hostTimer.stop();
 
         bool resultOk = MatrixCompare(h_matrixC, h_matrixD, 
                 static_cast<long>(matrixWidth));
@@ -315,7 +316,14 @@ main(int argc, char * argv[])
                 << " GB/s" << std::endl
               << "***    Time for Matrix Multiplication: " << 1e3 * kernelTimer.getTime()
                   << " ms" << std::endl
+              << "***    Overall Time (a+b+c): " << 1e3 * (memCpyH2DTimer.getTime() + memCpyD2HTimer.getTime() + kernelTimer.getTime())
+                  << " ms " << std::endl
+              << "***    Speed-Up compared to host (with movements)  : " << hostTimer.getTime()/(memCpyH2DTimer.getTime() + memCpyD2HTimer.getTime() + kernelTimer.getTime())
+                  << std::endl
+              << "***    Speed-Up compared to host (without movements)  : " << hostTimer.getTime()/memCpyD2HTimer.getTime()
+                  << std::endl
               << "***" << std::endl;
+             
 
     if (chCommandLineGetBool("print-matrix", argc, argv) 
        && matrixWidth <= 16) {
