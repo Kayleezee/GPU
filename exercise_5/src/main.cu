@@ -316,11 +316,13 @@ main(int argc, char * argv[])
                 << " GB/s" << std::endl
               << "***    Time for Matrix Multiplication: " << 1e3 * kernelTimer.getTime()
                   << " ms" << std::endl
+              << "***    CPU Version : " << 1e3 * hostTimer.getTime()
+                  << " ms" << std::endl
               << "***    Overall Time (a+b+c): " << 1e3 * (memCpyH2DTimer.getTime() + memCpyD2HTimer.getTime() + kernelTimer.getTime())
                   << " ms " << std::endl
               << "***    Speed-Up compared to host (with movements)  : " << hostTimer.getTime()/(memCpyH2DTimer.getTime() + memCpyD2HTimer.getTime() + kernelTimer.getTime())
                   << std::endl
-              << "***    Speed-Up compared to host (without movements)  : " << hostTimer.getTime()/memCpyD2HTimer.getTime()
+              << "***    Speed-Up compared to host (without movements)  : " << hostTimer.getTime()/kernelTimer.getTime()
                   << std::endl
               << "***" << std::endl;
              
