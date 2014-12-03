@@ -175,13 +175,46 @@
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem}[Matrix Multiply – GPU naïve version]
+In der fünften Übung ist zunächst eine naive form der Matrix-Multiplikation in CUDA zu 
+realisieren. Es soll die Anzahl der Threads-Per-Block (tpb) variiert werden um den optimalen
+Parameter dafür zu finden. Es hat sich gezeigt, dass die Multiplikation bei 8 tpb 
+die beste Perfomance liefert.
 
+Mit dieser Anzahl an tpb wurde die gesamte Ausführungszeit sowie die einzelnen
+Ausführungszeiten für den host-to-device Datentransfer, device-to-host Datentransfer
+und die Kernel Ausführung für verschiedene Problemgrößen gemessen. Nachfolgender 
+Plot zeigt entsprechende Ergebnisse.
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{globmatmul.png}
+\end{center}
+Man sieht, dass sich eine erhebliche Beschleunigung der Ausführungszeit gegenüber der
+reinen CPU Version ergibt. Ebenfalls sieht man, dass sich die gesamte Auführungszeit 
+für große Problemgrößen an die Kernel Ausführungszeit annähert. Dies bedeutet, dass
+der zusätzliche Datentransfer für große Problemgrößen kaum eine Rolle spielt.
+
+Abhängig von der Problemgröße und davon ob die zusätzliche Zeit für den Datentransfer
+mit einberechnet wird, ergibt sich folgender Verlauf für den Speed-Up (im Vergleich 
+zur CPU-Version).
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{speed-up_glob.png}
+\end{center}
+Auch hier wird deutlich, dass die zusätzliche Zeit für den Datentransfer nur für
+kleine Problemgrößen relevant ist. Für große Problemgrößen konnte hier ein
+Speed-Up von bis zu 33 erzielt werden.
 \end{homeworkProblem}
 %----------------------------------------------------------------------------------------
 %	Matrix Multiply – GPU version using shared memory
 %----------------------------------------------------------------------------------------
 \begin{homeworkProblem}[Matrix Multiply – GPU version using shared memory]
-
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{var_tpb.png}
+\end{center}
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{shmatmul.png}
+\end{center}
+\begin{center}
+\includegraphics[width=0.8\columnwidth]{speed-up_sh.png}
+\end{center}
 \end{homeworkProblem}
 \pagebreak
 \end{document}
