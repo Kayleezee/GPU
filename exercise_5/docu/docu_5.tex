@@ -168,7 +168,9 @@
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem}[Reading - The GPU Computing Era]
-
+In "The GPU Computing Era" the authors John Nickolls and William J. Dally illustrate the fast evolution of GPUs from a single-chip accelerator for computer games in the late 90s to a massively parallel GPGPU boosting parallel applications nowadays. In this short period of time the GPU evolved to a programmable high-end computing tool with a scalable parallel architecture including cached memory hierarchy and streaming multiprocessors with several CUDA processor cores each capable of managing thousands of parallel threads through an efficient single-instruction multiple-thread architecture. \\ \\
+To achieve the highest application performance a coordinated synergy of CPU and GPU is the best-practice in the parallel application developement. By using coprocessing an application can reach a speedup from 9 up to 137 - depending on the application field. As application becomes more parallel it is important to split up the execution of code between latency-optimized CPUs for serial fractions and throughput-optimized GPUs for parallel fractions to gain the highest efficiency and shortest execution time. \\ \\
+Though the article is rather sales promotion for NVIDIA products than a research paper the conclusion shows the possibilities of coprocessing architecture. By using the right processor for the right task an application can benefit from high speedups compared to CPU-only architectures.    
 \end{homeworkProblem}
 %----------------------------------------------------------------------------------------
 %	Matrix Multiply – GPU naïve version
