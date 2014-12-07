@@ -2,7 +2,7 @@
  *
  *       Computer Engineering Group, Heidelberg University - GPU Computing Exercise 06
  *
- *                 Gruppe : TODO
+ *                 Gruppe : gpucomp02
  *
  *                   File : main.cu
  *
@@ -30,11 +30,26 @@ void printHelp(char *);
 __global__ void
 reduction_Kernel(int numElements, float* dataIn, float* dataOut)
 {
-	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
-	
+    extern __shared__ float sPartArray[];
+
+    const int tid = threadIdx.x;
+	unsigned int elementId = blockIdx.x * (blockSize*2) + threadIdx.x;
+	unsigned int gridSize = blockSize * 2 * gridDim.x;
+
+    sPartArray[tid] = 0;
+
 	if (elementId < numElements)
 	{
 		/*TODO Kernel Code*/
+		while(elementId < numElements) {
+            sPartArray[tid] += dataIn[elementId] + dataIn[elementId + blockSize];
+            elementId += gridSize;
+		}
+		__syncthreads();
+	}
+
+	if (tid == 0) {
+        dataOut[blockIdx.x] = sPartArray[0];
 	}
 }
 
@@ -93,9 +108,9 @@ main(int argc, char * argv[])
 	else
 	{
 		// Pinned
-		cudaMallocHost(&h_dataIn, 
+		cudaMallocHost(&h_dataIn,
 				static_cast<size_t>(numElements * sizeof(*h_dataIn)));
-		cudaMallocHost(&h_dataOut, 
+		cudaMallocHost(&h_dataOut,
 				static_cast<size_t>(sizeof(*h_dataOut)));
 	}
 	// Init h_dataOut
@@ -104,9 +119,9 @@ main(int argc, char * argv[])
 	// Device Memory
 	float* d_dataIn = NULL;
 	float* d_dataOut = NULL;
-	cudaMalloc(&d_dataIn, 
+	cudaMalloc(&d_dataIn,
 			static_cast<size_t>(numElements * sizeof(*d_dataIn)));
-	cudaMalloc(&d_dataOut, 
+	cudaMalloc(&d_dataOut,
 			static_cast<size_t>(sizeof(*d_dataOut)));
 
 	if (h_dataIn == NULL || h_dataOut == NULL ||
@@ -124,11 +139,11 @@ main(int argc, char * argv[])
 	//
 	memCpyH2DTimer.start();
 
-	cudaMemcpy(d_dataIn, h_dataIn, 
-			static_cast<size_t>(numElements * sizeof(*d_dataIn)), 
+	cudaMemcpy(d_dataIn, h_dataIn,
+			static_cast<size_t>(numElements * sizeof(*d_dataIn)),
 			cudaMemcpyHostToDevice);
-	cudaMemcpy(d_dataOut, h_dataOut, 
-			static_cast<size_t>(sizeof(*d_dataOut)), 
+	cudaMemcpy(d_dataOut, h_dataOut,
+			static_cast<size_t>(sizeof(*d_dataOut)),
 			cudaMemcpyHostToDevice);
 
 	memCpyH2DTimer.stop();
@@ -154,7 +169,7 @@ main(int argc, char * argv[])
 		exit(-1);
 	}
 
-	gridSize = ceil(numElements / blockSize);
+	gridSize = ceil(static_cast<float>(numElements) / static_cast<float>(blockSize));
 
 	dim3 grid_dim = dim3(gridSize);
 	dim3 block_dim = dim3(blockSize);
@@ -185,8 +200,8 @@ main(int argc, char * argv[])
 	//
 	memCpyD2HTimer.start();
 
-	cudaMemcpy(h_dataOut, d_dataIn, 
-			static_cast<size_t>(sizeof(*d_dataOut)), 
+	cudaMemcpy(h_dataOut, d_dataOut,
+			static_cast<size_t>(sizeof(*d_dataOut)),
 			cudaMemcpyDeviceToHost);
 
 	memCpyD2HTimer.stop();
@@ -204,19 +219,19 @@ main(int argc, char * argv[])
 	}
 	cudaFree(d_dataIn);
 	cudaFree(d_dataOut);
-	
+
 	// Print Meassurement Results
 	std::cout << "***" << std::endl
 			  << "*** Results:" << std::endl
 			  << "***    Num Elements: " << numElements << std::endl
 			  << "***    Time to Copy to Device: " << 1e3 * memCpyH2DTimer.getTime()
 			  	<< " ms" << std::endl
-			  << "***    Copy Bandwidth: " 
+			  << "***    Copy Bandwidth: "
 			  	<< 1e-9 * memCpyH2DTimer.getBandwidth(numElements * sizeof(*h_dataIn))
 			  	<< " GB/s" << std::endl
 			  << "***    Time to Copy from Device: " << 1e3 * memCpyD2HTimer.getTime()
 			  	<< " ms" << std::endl
-			  << "***    Copy Bandwidth: " 
+			  << "***    Copy Bandwidth: "
 			  	<< 1e-9 * memCpyD2HTimer.getBandwidth(sizeof(*h_dataOut))
 				<< " GB/s" << std::endl
 			  << "***    Time for Reduction: " << 1e3 * kernelTimer.getTime()
@@ -240,7 +255,7 @@ printHelp(char * argv)
 			  << "  -s <num-elements>|--size <num-elements>" << std::endl
 			  << "	The size of the Matrix" << std::endl
 			  << "" << std::endl
-			  << "  -t <threads_per_block>|--threads-per-block <threads_per_block>" 
+			  << "  -t <threads_per_block>|--threads-per-block <threads_per_block>"
 			  	<< std::endl
 			  << "	The number of threads per block" << std::endl
 			  << "" << std::endl;
