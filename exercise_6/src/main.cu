@@ -29,9 +29,9 @@ void printHelp(char *);
 //
 float cpu_reduce(float *pArray, int iSize) {
 	int i;
-	
+
 	float fRes = 0.0;
-	
+
 	for(i = 0; i < iSize; i++) {
 		fRes += pArray[i];
 	}
@@ -50,19 +50,15 @@ reduction_KernelNaive(int numElements, float* dataIn, float* dataOut)
     const int tid = threadIdx.x;
 	unsigned int elementId = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (elementId < numElements)
-	{
-		/*TODO Kernel Code*/
-		sPartArray[tid] = dataIn[elementId];
-        __syncthreads;
+    sPartArray[tid] = dataIn[elementId];
+    __syncthreads();
 
-		for(unsigned int s = 1; s < blockDim.x; s *= 2) {
-            if(tid % (2 * s) == 0) {
-                sPartArray[tid] += sPartArray[tid + s];
-            }
-            __syncthreads();
-		}
-	}
+    for(unsigned int s = 1; s < blockDim.x; s *= 2) {
+        if(tid % (2 * s) == 0) {
+            sPartArray[tid] += sPartArray[tid + s];
+        }
+        __syncthreads();
+    }
 
 	if (tid == 0) {
         dataOut[blockIdx.x] = sPartArray[0];
@@ -78,21 +74,49 @@ reduction_KernelOptimized(int numElements, float* dataIn, float* dataOut)
     extern __shared__ float sPartArray[];
 
     const int tid = threadIdx.x;
-	unsigned int elementId = blockIdx.x * (blockSize*2) + threadIdx.x;
-	unsigned int gridSize = blockSize * 2 * gridDim.x;
+	unsigned int elementId = blockIdx.x * blockDim.x + threadIdx.x;
 
-    sPartArray[tid] = 0;
+    sPartArray[tid] = dataIn[elementId];
+    __syncthreads();
 
-	if (elementId < numElements)
-	{
-		/*TODO Kernel Code*/
-		while(elementId < numElements) {
-            sPartArray[tid] += dataIn[elementId] + dataIn[elementId + blockSize];
-            elementId += gridSize;
-		}
-		__syncthreads();
-	}
+    for(unsigned int s = blockDim.x/2; s > 0; s >>= 1) {
+        if(tid < s) {
+            sPartArray[tid] += sPartArray[tid + s];
+        }
+        __syncthreads();
+    }
 
+    /*
+    extern __shared__ float sPartArray[];
+
+    const int tid = threadIdx.x;
+
+
+	unsigned int elementId = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
+
+
+
+
+
+
+
+    sPartArray[tid] = dataIn[elementId] + dataIn[elementId + blockDim.x];
+    __syncthreads();
+
+    for(unsigned int s = blockDim.x / 2; s > 32; s >>= 1) {
+        if(tid < s) {
+            sPartArray[tid] += sPartArray[tid + s];
+        }
+        __syncthreads();
+    }
+
+    if(tid < 32 && blockDim.x >= 64) sPartArray[tid] += sPartArray[tid + 32];
+    if(tid < 16 && blockDim.x >= 32) sPartArray[tid] += sPartArray[tid + 16];
+    if(tid <  8 && blockDim.x >= 16) sPartArray[tid] += sPartArray[tid +  8];
+    if(tid <  4 && blockDim.x >=  8) sPartArray[tid] += sPartArray[tid +  4];
+    if(tid <  2 && blockDim.x >=  4) sPartArray[tid] += sPartArray[tid +  2];
+    if(tid <  1 && blockDim.x >=  2) sPartArray[tid] += sPartArray[tid +  1];
+    */
 	if (tid == 0) {
         dataOut[blockIdx.x] = sPartArray[0];
 	}
@@ -161,21 +185,39 @@ main(int argc, char * argv[])
 	}
 	// Init h_dataIn & h_dataOut
 	for(int i = 0; i < numElements; i++) {
-		h_dataIn[i] = (float)i;
+		h_dataIn[i] = (float)1;
 	}
-	
+
 	*h_dataOut = 0;
-	
-	
+
+
 	/* CPU REDUCTION **************************************************/
 	float fCPURes;
-	
+
 	cpuTimer.start();
 	fCPURes = cpu_reduce(h_dataIn, numElements);
 	cpuTimer.stop();
-	
+
+    /* Test */
+	std::cout << fCPURes << std::endl;
+
 	/* CPU REDUCTION **************************************************/
-	
+
+    //
+	// Get Kernel Launch Parameters
+	//
+	int blockSize = 0,
+		gridSize = 0;
+
+	// Block Dimension / Threads per Block
+	chCommandLineGet<int>(&blockSize,"t", argc, argv);
+	chCommandLineGet<int>(&blockSize,"threads-per-block", argc, argv);
+	blockSize = blockSize != 0 ?
+			blockSize : DEFAULT_BLOCK_DIM;
+
+	gridSize = ceil((float) numElements /(float) blockSize);
+
+
 	// Device Memory
 	float* d_dataIn = NULL;
 	float* d_dataOut = NULL;
@@ -208,18 +250,6 @@ main(int argc, char * argv[])
 
 	memCpyH2DTimer.stop();
 
-	//
-	// Get Kernel Launch Parameters
-	//
-	int blockSize = 0,
-		gridSize = 0;
-
-	// Block Dimension / Threads per Block
-	chCommandLineGet<int>(&blockSize,"t", argc, argv);
-	chCommandLineGet<int>(&blockSize,"threads-per-block", argc, argv);
-	blockSize = blockSize != 0 ?
-			blockSize : DEFAULT_BLOCK_DIM;
-
 	if (blockSize > 1024)
 	{
 		std::cout << "\033[31m***" << std::endl
@@ -229,14 +259,18 @@ main(int argc, char * argv[])
 		exit(-1);
 	}
 
-	gridSize = ceil(static_cast<float>(numElements) / static_cast<float>(blockSize));
-
 	dim3 grid_dim = dim3(gridSize);
 	dim3 block_dim = dim3(blockSize);
+    int sharedMem = block_dim.x * sizeof(float);
+
+    std::cout << "TEST!" << std::endl;
 
 	kernelTimer.start();
 
-	reduction_Kernel<<<grid_dim, block_dim>>>(numElements, d_dataIn, d_dataOut);
+	reduction_KernelNaive<<<grid_dim, block_dim, sharedMem>>>(numElements, d_dataIn, d_dataOut);
+	reduction_KernelNaive<<<1, grid_dim, sharedMem>>>(grid_dim.x, d_dataOut, d_dataOut);
+
+    kernelTimer.stop();
 
 	// Synchronize
 	cudaDeviceSynchronize();
@@ -253,8 +287,6 @@ main(int argc, char * argv[])
 		return -1;
 	}
 
-	kernelTimer.stop();
-
 	//
 	// Copy Back Data
 	//
@@ -265,6 +297,62 @@ main(int argc, char * argv[])
 			cudaMemcpyDeviceToHost);
 
 	memCpyD2HTimer.stop();
+
+    if(h_dataOut[0] != numElements) {
+        std::cout << "Result of reduction is not equal (CPU - GPU)" << std::endl;
+        std::cout << h_dataOut[0] << std::endl;
+    }
+    std::cout << h_dataOut[0] << std::endl;
+    //
+    //
+    //
+    /* Optimized */
+    *h_dataOut = 0;
+    cudaMemcpy(d_dataIn, h_dataIn,
+			static_cast<size_t>(numElements * sizeof(*d_dataIn)),
+			cudaMemcpyHostToDevice);
+
+    gridSize = ceil((float) numElements /(float) blockSize);
+    grid_dim = dim3(gridSize);
+	block_dim = dim3(blockSize);
+    sharedMem = block_dim.x * sizeof(float);
+
+	kernelOptTimer.start();
+
+	reduction_KernelOptimized<<<grid_dim, block_dim, sharedMem>>>(numElements, d_dataIn, d_dataOut);
+	reduction_KernelOptimized<<<1, grid_dim, sharedMem>>>(grid_dim.x, d_dataOut, d_dataOut);
+
+    kernelOptTimer.stop();
+
+	// Synchronize
+	cudaDeviceSynchronize();
+
+	// Check for Errors
+	cudaError = cudaGetLastError();
+	if (cudaError != cudaSuccess)
+	{
+		std::cout << "\033[31m***" << std::endl
+				  << "***ERROR*** " << cudaError << " - " << cudaGetErrorString(cudaError)
+				  	<< std::endl
+				  << "***\033[0m" << std::endl;
+
+		return -1;
+	}
+
+    memCpyD2HTimer.start();
+
+	cudaMemcpy(h_dataOut, d_dataOut,
+			static_cast<size_t>(sizeof(*d_dataOut)),
+			cudaMemcpyDeviceToHost);
+
+	memCpyD2HTimer.stop();
+
+    /* Test */
+    if(h_dataOut[0] != numElements) {
+        std::cout << "Result of reduction is not equal (CPU - GPU Optimized)" << std::endl;
+        std::cout << h_dataOut[0] << std::endl;
+    }
+    std::cout << h_dataOut[0] << std::endl;
 
 	// Free Memory
 	if (!pinnedMemory)
@@ -283,20 +371,39 @@ main(int argc, char * argv[])
 	// Print Meassurement Results
 	std::cout << "***" << std::endl
 			  << "*** Results:" << std::endl
-			  << "***    Num Elements: " << numElements << std::endl
-			  << "***    Time to Copy to Device: " << 1e3 * memCpyH2DTimer.getTime()
+			  << "***    Num Elements            : " << numElements << std::endl
+              << "***    Num Threads             : " << blockSize << std::endl
+              << "***    Num Block               : " << gridSize << std::endl
+
+			  << "***    Time to Copy to Device  : " << 1e3 * memCpyH2DTimer.getTime()
 			  	<< " ms" << std::endl
-			  << "***    Copy Bandwidth: "
+			  << "***    Copy Bandwidth          : "
 			  	<< 1e-9 * memCpyH2DTimer.getBandwidth(numElements * sizeof(*h_dataIn))
 			  	<< " GB/s" << std::endl
 			  << "***    Time to Copy from Device: " << 1e3 * memCpyD2HTimer.getTime()
 			  	<< " ms" << std::endl
-			  << "***    Copy Bandwidth: "
+			  << "***    Copy Bandwidth          : "
 			  	<< 1e-9 * memCpyD2HTimer.getBandwidth(sizeof(*h_dataOut))
 				<< " GB/s" << std::endl
-			  << "***    Time for Reduction: " << 1e3 * kernelTimer.getTime()
+			  << "***    Time for Reduction      : " << 1e3 * kernelTimer.getTime()
 				  << " ms" << std::endl
-			  << "***" << std::endl;
+			  << "***" << std::endl
+			  << "***    Bandwidth Reduction(CPU): " << 1e-9 * cpuTimer.getBandwidth(numElements * sizeof(*h_dataIn))
+                  << " GB/s" << std::endl
+              << "***    Time for Reduction (CPU): " << 1e3 * cpuTimer.getTime()
+                  << " ms" << std::endl
+              << "***    Bandwidth Reduction(GPU): " << 1e-9 * kernelTimer.getBandwidth(numElements * sizeof(*h_dataIn))
+                  << " GB/s" << std::endl
+              << "***    Time for Reduction (GPU): " << 1e3 * kernelTimer.getTime()
+                  << " ms" << std::endl
+              << "***    SpeedUp CPU - GPU       : " << cpuTimer.getTime() / kernelTimer.getTime() << std::endl
+              << "***" << std::endl
+			  << "***    Bandwidth Reduction(OPT): " << 1e-9 * kernelOptTimer.getBandwidth(numElements * sizeof(*h_dataIn))
+                  << " GB/s" << std::endl
+              << "***    Time for Reduction (OPT): " << 1e3 * kernelOptTimer.getTime()
+                  << " ms" << std::endl
+              << "***    SpeedUp CPU - OPT       : " << cpuTimer.getTime() / kernelOptTimer.getTime() << std::endl;
+
 
 	return 0;
 }

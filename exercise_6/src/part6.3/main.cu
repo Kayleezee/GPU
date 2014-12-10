@@ -39,7 +39,7 @@ reduction_Kernel(int numElements, float* dataIn, float* dataOut)
 	{
 		/*TODO Kernel Code*/
 		sPartArray[tid] = dataIn[elementId];
-        __syncthreads;
+        __syncthreads();
 
 		for(unsigned int s = 1; s < blockDim.x; s *= 2) {
             if(tid % (2 * s) == 0) {
