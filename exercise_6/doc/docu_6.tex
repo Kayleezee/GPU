@@ -126,8 +126,8 @@
 %	NAME AND CLASS SECTION
 %----------------------------------------------------------------------------------------
 
-\newcommand{\hmwkTitle}{Übung\ \#7} % Assignment title
-\newcommand{\hmwkDueDate}{Donnerstag,\ 03.\ Dezember\ 2014} % Due date
+\newcommand{\hmwkTitle}{Übung\ \#6} % Assignment title
+\newcommand{\hmwkDueDate}{Donnerstag,\ 11.\ Dezember\ 2014} % Due date
 \newcommand{\hmwkClass}{GPU Computing} % Course/class
 \newcommand{\hmwkClassTime}{} % Class/lecture time
 \newcommand{\hmwkClassInstructor}{} % Teacher/lecturer
@@ -183,6 +183,70 @@ In that way it tells the user what optimizations should he implement and in what
 Using micro benchmarks he is testing 4 different cournels to apply this model.
 
 The Roofline model seams to be a very clear and easy to aply way for characterizing multicore architures for to find a first starting point for optimizations.
+
+\end{homeworkProblem}
+\pagebreak
+
+%----------------------------------------------------------------------------------------
+%	REDUCTION - CPU
+%----------------------------------------------------------------------------------------
+
+\begin{homeworkProblem} [Reduction - CPU]
+In diesem Abschnitte sollte eine \textit{global sum reduction} als sequentielle CPU-Version realisiert werden.
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=0.8\columnwidth]{cpu.png}
+	\end{center}
+	\caption{Bandbreite in Abhängigkeit von der Arraygröße für die unoptimierte sequentielle CPU-Version der Global Sum Reduction.}
+	\label{fig:abb1} 
+\end{figure}
+
+In Abbildung \ref{fig:abb1} sind die Messergebnisse der sequentiellen Implementierung dargestellt. Hier werden alle Elemente des Datentyps \textit{float} eines \textit{arrays} mit Hilfe einer \textit{for-loop} addiert; als Ergebnis erhalten wir die Summe aller Elemente.
+\\
+\\
+Was man in Abbildung \ref{fig:abb1} beobachten kann ist, dass bei einer Größe von 128 Elementen eine Bandbreite von ca. 0,5 \textit{GB/s} gemessen wurde. Mit zunehmender Arraygröße steigt diese bis auf ca. 1,5 \textit{GB/s} an und pendelt sich in diesem Bereich ein. Ab diesem Bereich ist der Cache nicht mehr ausreichend und der Prozess muss auf den Arbeitsspeicher ausweichen, was sich auf die Geschwindigkeit der Berechnung auswirkt.
+
+\end{homeworkProblem}
+\pagebreak
+%----------------------------------------------------------------------------------------
+%	REDUCTION - GPU INITIAL VERSION
+%----------------------------------------------------------------------------------------
+
+\begin{homeworkProblem} [Reduction - GPU initial version]
+In dieser Aufgabe war das Ziel eine unoptimierte parallele GPU-Version der \textit{global sum reduction} zu implementieren und die Bandbreite in Abhängigkeit der Arraygröße zu messen und diese mit der Bandbreite der CPU-Version zu vergleichen.
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=0.8\columnwidth]{cpu_inigpu.png}
+	\end{center}
+	\caption{Bandbreite in Abhängigkeit von der Arraygröße für die unoptimierte parallele GPU-Version der Global Sum Reduction. Die Messungen wurden mit unterschiedlicher Anzahl von Threads durchgeführt.}
+	\label{fig:abb2} 
+\end{figure}
+
+Betrachtet man Abbildung \ref{fig:abb2} stellt man fest, dass die sequentielle CPU-Version bis zu einer Arraygröße von knapp über 8192 Elementen eine höhere Bandbreite aufweist, als die unoptimierte parallele GPU-Version. Der Grund hierfür sind der Overhead und die geringe Datenmenge der parallelen Implementierung, welche für kleine Arraygrößen eine negative Auswirkung auf die Bandbreite aufweisen. 
+Mit steigenden Problemgrößen steigt auch die Bandbreite der parallelen Implementierung und kann somit zu weitaus schnelleren Ausführungszeiten führen. Dies wirkt sich dementsprechend auch auf den Speed-Up aus.
+Aus Gründen der Darstellung wurde hier die Darstellung von Abbildung \ref{fig:abb2} im oberen Bereich begrenzt. Als Peak wurde hier eine Bandbreite von ca. 38 \textit{GB/s} für 262144 Elemente erreicht.  
+
+\end{homeworkProblem}
+
+
+%----------------------------------------------------------------------------------------
+%	REDUCTION - GPU OPTIMIZED VERSION
+%----------------------------------------------------------------------------------------
+
+\begin{homeworkProblem} [Reduction - GPU optimized version]
+In der letzten Aufgabe dieser Übung sollte eine optimierte parallele GPU-Version der \textit{global sum reduction} implementiert werden und die Bandbreiten aller drei Versionen verglichen werden.
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=0.8\columnwidth]{cpu_inigpu_optgpu.png}
+	\end{center}
+	\caption{Bandbreite in Abhängigkeit von der Arraygröße für die unoptimierte als auch die optimierte parallele GPU-Version der Global Sum Reduction. Die Messungen wurden mit unterschiedlicher Anzahl von Threads durchgeführt.}
+	\label{fig:abb3} 
+\end{figure}
+
+Auf den ersten Blick kann man feststellen, dass die optimierte Version der parallelen Implementierung den \textit{break-even-point} früher - bei einer Arraygröße von ca. 3000 Elementen - erreicht als die unoptimierte Version. Als Maximum konnten wir hier eine Bandbreite von ca. 73 \textit{GB/s} erreichen.
 
 \end{homeworkProblem}
 \pagebreak

@@ -85,41 +85,10 @@ reduction_KernelOptimized(int numElements, float* dataIn, float* dataOut)
         }
         __syncthreads();
     }
-
-    /*
-    extern __shared__ float sPartArray[];
-
-    const int tid = threadIdx.x;
-
-
-	unsigned int elementId = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
-
-
-
-
-
-
-
-    sPartArray[tid] = dataIn[elementId] + dataIn[elementId + blockDim.x];
-    __syncthreads();
-
-    for(unsigned int s = blockDim.x / 2; s > 32; s >>= 1) {
-        if(tid < s) {
-            sPartArray[tid] += sPartArray[tid + s];
-        }
-        __syncthreads();
-    }
-
-    if(tid < 32 && blockDim.x >= 64) sPartArray[tid] += sPartArray[tid + 32];
-    if(tid < 16 && blockDim.x >= 32) sPartArray[tid] += sPartArray[tid + 16];
-    if(tid <  8 && blockDim.x >= 16) sPartArray[tid] += sPartArray[tid +  8];
-    if(tid <  4 && blockDim.x >=  8) sPartArray[tid] += sPartArray[tid +  4];
-    if(tid <  2 && blockDim.x >=  4) sPartArray[tid] += sPartArray[tid +  2];
-    if(tid <  1 && blockDim.x >=  2) sPartArray[tid] += sPartArray[tid +  1];
-    */
-	if (tid == 0) {
+    
+    if (tid == 0) {
         dataOut[blockIdx.x] = sPartArray[0];
-	}
+    }
 }
 
 
