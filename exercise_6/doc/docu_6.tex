@@ -214,7 +214,32 @@ Was man in Abbildung \ref{fig:abb1} beobachten kann ist, dass bei einer Größe 
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem} [Reduction - GPU initial version]
-In dieser Aufgabe war das Ziel eine unoptimierte parallele GPU-Version der \textit{global sum reduction} zu implementieren und die Bandbreite in Abhängigkeit der Arraygröße zu messen und diese mit der Bandbreite der CPU-Version zu vergleichen.
+In dieser Aufgabe war das Ziel eine unoptimierte parallele GPU-Version der \textit{global sum reduction} zu implementieren und die Bandbreite in Abhängigkeit der Arraygröße zu messen und diese mit der Bandbreite der CPU-Version zu vergleichen. Hier der Code für den unoptimierten Kernel:
+\\
+\begin{lstlisting}{c}
+__global__ void
+reduction_KernelNaive(int numElements, float* dataIn, float* dataOut)
+{
+    extern __shared__ float sPartArray[];
+
+    const int tid = threadIdx.x;
+	unsigned int elementId = blockIdx.x * blockDim.x + threadIdx.x;
+
+    sPartArray[tid] = dataIn[elementId];
+    __syncthreads();
+
+    for(unsigned int s = 1; s < blockDim.x; s *= 2) {
+        if(tid % (2 * s) == 0) {
+            sPartArray[tid] += sPartArray[tid + s];
+        }
+        __syncthreads();
+    }
+
+	if (tid == 0) {
+        dataOut[blockIdx.x] = sPartArray[0];
+	}
+}
+\end{lstlisting}
 
 \begin{figure}
 	\begin{center}
@@ -229,14 +254,39 @@ Mit steigenden Problemgrößen steigt auch die Bandbreite der parallelen Impleme
 Aus Gründen der Darstellung wurde hier die Darstellung von Abbildung \ref{fig:abb2} im oberen Bereich begrenzt. Als Peak wurde hier eine Bandbreite von ca. 38 \textit{GB/s} für 262144 Elemente erreicht.  
 
 \end{homeworkProblem}
-
+\pagebreak
 
 %----------------------------------------------------------------------------------------
 %	REDUCTION - GPU OPTIMIZED VERSION
 %----------------------------------------------------------------------------------------
 
 \begin{homeworkProblem} [Reduction - GPU optimized version]
-In der letzten Aufgabe dieser Übung sollte eine optimierte parallele GPU-Version der \textit{global sum reduction} implementiert werden und die Bandbreiten aller drei Versionen verglichen werden.
+In der letzten Aufgabe dieser Übung sollte eine optimierte parallele GPU-Version der \textit{global sum reduction} implementiert werden und die Bandbreiten aller drei Versionen verglichen werden. Für den optimierten Kernel wurde die \textit{interleaved addressing non-divergent} Variante verwendet. Hier der Kernel-Code:
+
+\begin{lstlisting}{c}
+__global__ void
+reduction_KernelOptimized(int numElements, float* dataIn, float* dataOut)
+{
+    extern __shared__ float sPartArray[];
+
+    const int tid = threadIdx.x;
+	unsigned int elementId = blockIdx.x * blockDim.x + threadIdx.x;
+
+    sPartArray[tid] = dataIn[elementId];
+    __syncthreads();
+
+    for(unsigned int s = blockDim.x/2; s > 0; s >>= 1) {
+        if(tid < s) {
+            sPartArray[tid] += sPartArray[tid + s];
+        }
+        __syncthreads();
+    }
+    
+    if (tid == 0) {
+        dataOut[blockIdx.x] = sPartArray[0];
+    }
+}
+\end{lstlisting}
 
 \begin{figure}
 	\begin{center}
@@ -246,7 +296,7 @@ In der letzten Aufgabe dieser Übung sollte eine optimierte parallele GPU-Versio
 	\label{fig:abb3} 
 \end{figure}
 
-Auf den ersten Blick kann man feststellen, dass die optimierte Version der parallelen Implementierung den \textit{break-even-point} früher - bei einer Arraygröße von ca. 3000 Elementen - erreicht als die unoptimierte Version. Als Maximum konnten wir hier eine Bandbreite von ca. 73 \textit{GB/s} erreichen.
+Auf den ersten Blick kann man feststellen, dass die optimierte Version der parallelen Implementierung den \textit{break-even-point} früher - bei einer Arraygröße von ca. 3000 Elementen - erreicht als die unoptimierte Version. Dies liegt daran, dass die \textit{Threads} eines \textit{Warps} nun einem vorbestimmten Kontrollpfad folgen und somit keine Divergenz auftritt. Dies wird durch die \textit{if-Abfrage} if(tid < s) gewährleistet; wobei tid der \textit{ThreadIdx.x} also der Thread-Index ist und s einen Stride darstellt. Als Maximum konnten wir hier eine Bandbreite von ca. 73 \textit{GB/s} erreichen. 
 
 \end{homeworkProblem}
 \pagebreak
