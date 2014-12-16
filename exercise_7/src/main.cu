@@ -125,8 +125,10 @@ simpleNbody_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 				bodyBodyInteraction(elementPosMass, bodyPos[i], elementForce);
 			}
 		}
-		elementForce = elementForce * elementPosMass.w * (-1*GAMMA);
-		
+		elementForce.x = (-1*GAMMA) * elementForce.x * elementPosMass.w;
+		elementForce.y = (-1*GAMMA) * elementForce.y * elementPosMass.w;
+                elementForce.z = (-1*GAMMA) * elementForce.z * elementPosMass.w;
+
 		calculateSpeed(elementPosMass.w, elementSpeed, elementForce);
 
 		bodySpeed[elementId] = elementSpeed;
@@ -155,13 +157,13 @@ updatePosition_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 
 	if (elementId < numElements) {
 	        elementPosMass = bodyPos[elementId];
-		elementSpeed = bodySpeed[elementID];
+		elementSpeed = bodySpeed[elementId];
 		
 		elementPosMass.x += elementSpeed.x * TIMESTEP;
 		elementPosMass.y += elementSpeed.y * TIMESTEP;
 		elementPosMass.z += elementSpeed.z * TIMESTEP;
 		
-		bodyPos[elementId] = elementPosMass;
+                bodyPos[elementId] = elementPosMass;
 	}
 }
 
