@@ -130,7 +130,6 @@ simpleNbody_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
                 elementForce.z = (-1*GAMMA) * elementForce.z * elementPosMass.w;
 
 		calculateSpeed(elementPosMass.w, elementSpeed, elementForce);
-
 		bodySpeed[elementId] = elementSpeed;
 	}
 }
@@ -138,9 +137,34 @@ simpleNbody_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 __global__ void
 sharedNbody_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 {
-	// Use the packed values and SOA to optimize load and store operations
-
-	/*TODO Kernel Code*/
+	extern __shared__ s_bodyPos[];
+	
+	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	float elementPosMass;
+	float elementForce;
+	float elementSpeed;
+	
+	if(elementId < numElements) {
+	
+                for(int i=0; i<numElements; i+=blockDim.x)
+		{
+		        s_bodyPos[threadIdx.x] = bodyPos[i+threadIdx.x];
+			__synctrheads();
+			
+			for(int j=0; j<blockDim.x; j++)
+			        if(i+j != elementId)
+			                bodyBodyInteraction(elementPosMass, s_BodyPos[j], elementForce);
+			__syncthreads();
+		}
+		
+		elementForce.x = (-1*GAMMA) * elementForce.x * elementPosMass.w;
+		elementForce.y = (-1*GAMMA) * elementForce.y * elementPosMass.w;
+                elementForce.z = (-1*GAMMA) * elementForce.z * elementPosMass.w;
+		
+		calculateSpeed(elementPosMass.w, elementSpeed, elementForce);
+		bodySpeed[elementId] = elementSpeed;
+	}
 }
 
 //
@@ -308,9 +332,16 @@ main(int argc, char * argv[])
 	kernelTimer.start();
 
 	for (int i = 0; i < numIterations; i ++) {
-		simpleNbody_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass, 
+	        if(!chCommandLineGetBool("shared",argc,argv)) {
+		        simpleNbody_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass, 
 				d_particles.velocity);
-		updatePosition_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass,
+		}
+		else {
+			// TODO: Calculate SHMEM size
+		        sharedNbody_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass, 
+				d_particles.velocity);
+		}
+		updatePosition_Kernel<<<grid_dim, block_dim, /* SHMEM_SIZE */>>>(numElements, d_particles.posMass,
 				d_particles.velocity);
 
 		cudaMemcpy(h_particles.posMass, d_particles.posMass, sizeof(float4), cudaMemcpyDeviceToHost);
@@ -398,6 +429,10 @@ printHelp(char * argv)
               << "  -t <threads_per_block>|--threads-per-block <threads_per_block>" 
                   << std::endl
               << "    The number of threads per block" << std::endl
+                  << std::endl
+              << "  -shared
+                  << std::endl
+              << "    Use the optimized shared variant" << std::endl
               << "" << std::endl;
 }
 
