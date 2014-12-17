@@ -137,24 +137,28 @@ simpleNbody_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 __global__ void
 sharedNbody_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 {
-	extern __shared__ s_bodyPos[];
+	extern __shared__ float4 s_bodyPos[];
 	
 	int elementId = blockIdx.x * blockDim.x + threadIdx.x;
 	
-	float elementPosMass;
-	float elementForce;
-	float elementSpeed;
+	float4 elementPosMass;
+	float3 elementForce;
+	float3 elementSpeed;
 	
 	if(elementId < numElements) {
+
+		elementPosMass = bodyPos[elementId];
+		elementSpeed = bodySpeed[elementId];
+		elementForce = make_float3(0,0,0);
 	
                 for(int i=0; i<numElements; i+=blockDim.x)
 		{
 		        s_bodyPos[threadIdx.x] = bodyPos[i+threadIdx.x];
-			__synctrheads();
+			__syncthreads();
 			
 			for(int j=0; j<blockDim.x; j++)
 			        if(i+j != elementId)
-			                bodyBodyInteraction(elementPosMass, s_BodyPos[j], elementForce);
+			                bodyBodyInteraction(elementPosMass, s_bodyPos[j], elementForce);
 			__syncthreads();
 		}
 		
@@ -329,6 +333,8 @@ main(int argc, char * argv[])
 	std::cout << "*** Block: " << blockSize << std::endl;
 	std::cout << "***" << std::endl;
 
+        int shMemSize = (numElements*sizeof(float4)) / gridSize;  
+
 	kernelTimer.start();
 
 	for (int i = 0; i < numIterations; i ++) {
@@ -337,11 +343,10 @@ main(int argc, char * argv[])
 				d_particles.velocity);
 		}
 		else {
-			// TODO: Calculate SHMEM size
-		        sharedNbody_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass, 
+		        sharedNbody_Kernel<<<grid_dim, block_dim, shMemSize>>>(numElements, d_particles.posMass, 
 				d_particles.velocity);
 		}
-		updatePosition_Kernel<<<grid_dim, block_dim, /* SHMEM_SIZE */>>>(numElements, d_particles.posMass,
+		updatePosition_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass,
 				d_particles.velocity);
 
 		cudaMemcpy(h_particles.posMass, d_particles.posMass, sizeof(float4), cudaMemcpyDeviceToHost);
@@ -430,7 +435,7 @@ printHelp(char * argv)
                   << std::endl
               << "    The number of threads per block" << std::endl
                   << std::endl
-              << "  -shared
+              << "  -shared"
                   << std::endl
               << "    Use the optimized shared variant" << std::endl
               << "" << std::endl;
