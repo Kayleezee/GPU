@@ -56,6 +56,7 @@ void printElement(Body_t, int, int);
 //
 // Calculate the Distance of two points
 //
+// 10 FLOPS 
 __device__ float
 getDistance(float4 a, float4 b)
 {
@@ -73,6 +74,7 @@ getDistance(float4 a, float4 b)
 //
 // Calculate the forces between two bodies
 //
+// 10 + 10 FLOPS
 __device__ void
 bodyBodyInteraction(float4 bodyA, float4 bodyB, float3& force)
 {
@@ -91,6 +93,7 @@ bodyBodyInteraction(float4 bodyA, float4 bodyB, float3& force)
 //
 // Calculate the new velocity of one particle
 //
+// 9 FLOPS
 __device__ void
 calculateSpeed(float mass, float3& currentSpeed, float3 force)
 {
@@ -106,6 +109,7 @@ calculateSpeed(float mass, float3& currentSpeed, float3 force)
 //
 // n-Body Kernel for the speed calculation
 //
+// (8 + 20*numElements + 9)*numElements FLOPS 
 __global__ void
 simpleNbody_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 {
@@ -175,6 +179,7 @@ sharedNbody_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 // n-Body Kernel to update the position
 // Neended to prevent write-after-read-hazards
 //
+// 8*numElements FLOPS
 __global__ void
 updatePosition_Kernel(int numElements, float4* bodyPos, float3* bodySpeed)
 {
@@ -216,7 +221,7 @@ main(int argc, char * argv[])
 			  << "***" << std::endl;
 
 	ChTimer memCpyH2DTimer, memCpyD2HTimer;
-	ChTimer kernelTimer;
+	ChTimer kernelTimer, naiveTimer, sharedTimer;
 
 	//
 	// Allocate Memory
@@ -334,42 +339,89 @@ main(int argc, char * argv[])
 	std::cout << "***" << std::endl;
 
         int shMemSize = (numElements*sizeof(float4)) / gridSize;  
-
-	kernelTimer.start();
-
-	for (int i = 0; i < numIterations; i ++) {
-	        if(!chCommandLineGetBool("shared",argc,argv)) {
-		        simpleNbody_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass, 
-				d_particles.velocity);
-		}
-		else {
-		        sharedNbody_Kernel<<<grid_dim, block_dim, shMemSize>>>(numElements, d_particles.posMass, 
-				d_particles.velocity);
-		}
-		updatePosition_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass,
-				d_particles.velocity);
-
-		cudaMemcpy(h_particles.posMass, d_particles.posMass, sizeof(float4), cudaMemcpyDeviceToHost);
-		cudaMemcpy(h_particles.velocity, d_particles.velocity, sizeof(float3), cudaMemcpyDeviceToHost);
-		printElement(h_particles, 0, i+1);
-	}
 	
-	// Synchronize
-	cudaDeviceSynchronize();
+	/* Branch for functionality test */
+        if(!chCommandLineGetBool("benchmark",argc,argv)) {
 
-	// Check for Errors
-	cudaError_t cudaError = cudaGetLastError();
-	if ( cudaError != cudaSuccess ) {
-		std::cout << "\033[31m***" << std::endl
-		          << "***ERROR*** " << cudaError << " - " << cudaGetErrorString(cudaError)
-		          << std::endl
-		          << "***\033[0m" << std::endl;
+		kernelTimer.start();
 
-		return -1;
-	}
+		for (int i = 0; i < numIterations; i ++) {
+	        	if(!chCommandLineGetBool("shared",argc,argv)) {
+				// (8 + 20*numElements + 9)*numElements FLOPS
+		        	simpleNbody_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass, 
+					d_particles.velocity);
+			}
+			else {
+				// (8 + 20*numElements + 9)*numElements FLOPS
+		        	sharedNbody_Kernel<<<grid_dim, block_dim, shMemSize>>>(numElements, d_particles.posMass, 
+					d_particles.velocity);
+			}
+			// 8*numElements FLOPS
+			updatePosition_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass,
+					d_particles.velocity);
 
-	kernelTimer.stop();
+			cudaMemcpy(h_particles.posMass, d_particles.posMass, sizeof(float4), cudaMemcpyDeviceToHost);
+			cudaMemcpy(h_particles.velocity, d_particles.velocity, sizeof(float3), cudaMemcpyDeviceToHost);
+			printElement(h_particles, 0, i+1);
+		}
+	
+		// Synchronize
+		cudaDeviceSynchronize();
 
+		// Check for Errors
+		cudaError_t cudaError = cudaGetLastError();
+		if ( cudaError != cudaSuccess ) {
+			std::cout << "\033[31m***" << std::endl
+		          	<< "***ERROR*** " << cudaError << " - " << cudaGetErrorString(cudaError)
+		          	<< std::endl
+		          	<< "***\033[0m" << std::endl;
+
+			return -1;
+		}
+
+		kernelTimer.stop();
+        }
+	/* Branch for benchmarking */
+	else {
+
+                naiveTimer.start();
+
+                for (int i = 0; i < numIterations; i ++) {
+                                // (8 + 20*numElements + 9)*numElements FLOPS
+                                simpleNbody_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass,
+                                        d_particles.velocity);
+                                // 8*numElements FLOPS
+                        	updatePosition_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass,
+                                        d_particles.velocity);
+		}
+		cudaDeviceSynchronize();
+		naiveTimer.stop();
+
+		sharedTimer.start();
+                for (int i = 0; i < numIterations; i ++) {
+                                // (8 + 20*numElements + 9)*numElements FLOPS
+                                sharedNbody_Kernel<<<grid_dim, block_dim, shMemSize>>>(numElements, d_particles.posMass,
+                                        d_particles.velocity);
+                        	// 8*numElements FLOPS
+                        	updatePosition_Kernel<<<grid_dim, block_dim>>>(numElements, d_particles.posMass,
+                                        d_particles.velocity);
+                }
+        
+                // Synchronize
+                cudaDeviceSynchronize();
+		sharedTimer.stop();
+                // Check for Errors
+                cudaError_t cudaError = cudaGetLastError();
+                if ( cudaError != cudaSuccess ) {
+                        std::cout << "\033[31m***" << std::endl
+                                << "***ERROR*** " << cudaError << " - " << cudaGetErrorString(cudaError)
+                                << std::endl
+                                << "***\033[0m" << std::endl;
+
+                        return -1;
+                }
+        }                          
+	
 	//
 	// Copy Back Data
 	//
@@ -409,10 +461,28 @@ main(int argc, char * argv[])
                 << " ms" << std::endl
               << "***    Copy Bandwidth: " 
                 << 1e-9 * memCpyD2HTimer.getBandwidth(numElements * sizeof(h_particles))
-                << " GB/s" << std::endl
-              << "***    Time for n-Body Computation: " << 1e3 * kernelTimer.getTime()
+                << " GB/s" << std::endl;
+	if(!chCommandLineGetBool("benchmark",argc,argv)) {
+		std::cout << "***    Time for n-Body Computation: " << 1e3 * kernelTimer.getTime()
                 << " ms" << std::endl
-              << "***" << std::endl;
+              	<< "***" << std::endl;
+	}
+	else {
+		std::cout << "***    Time for n-Body Computation (simple): " << 1e3 * naiveTimer.getTime()
+                << " ms" << std::endl
+                << "***" << std::endl
+		<< "***    Time for n-Body Computation (optimized): " << 1e3 * sharedTimer.getTime()
+                << " ms" << std::endl
+                << "***" << std::endl
+		<< "***    Speed-Up: " << naiveTimer.getTime() / sharedTimer.getTime() << std::endl
+                << "***" << std::endl
+		<< "***    Performance (simple): " << (double)((double)numIterations*((17+28*(double)numElements)*(double)numElements) / naiveTimer.getTime()) / (1E9)
+                << " GFLOPS" << std::endl
+                << "***" << std::endl
+		<< "***    Performance (optimized): " << (double)((double)numIterations*((17+28*(double)numElements)*(double)numElements) / sharedTimer.getTime()) / (1e9)
+                << " GFLOPS" << std::endl
+                << "***" << std::endl;
+	}
 
 	return 0;
 }
@@ -438,6 +508,10 @@ printHelp(char * argv)
               << "  -shared"
                   << std::endl
               << "    Use the optimized shared variant" << std::endl
+              << "" << std::endl
+		 << "  -benchmark"
+                  << std::endl
+              << "    Run the Benchmark" << std::endl
               << "" << std::endl;
 }
 
