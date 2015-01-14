@@ -20,11 +20,10 @@
 #include <cstdio>
 #include <iomanip>
 
-#define _OPT_KERNEL
 const static int DEFAULT_NUM_ELEMENTS   = 1024;
 const static int DEFAULT_NUM_ITERATIONS =    5;
 const static int DEFAULT_BLOCK_DIM      =  128;
-const static int DEFAULT_STEPS          =  100;
+//const static int DEFAULT_STEPS          =  100;
 
 //
 // Structures
@@ -63,8 +62,7 @@ simpleStencil_Kernel(StencilArray_t d_array_old, StencilArray_t d_array_new)
 
     float act_sum;
 
-    for(int i=0; i<DEFAULT_STEPS; i++){
-      if(!isBorder(d_array_old.size, iIndex)) {
+    if(!isBorder(d_array_old.size, iIndex)) {
 
         act_sum = fThisValue + 24.0 / 100.0
                   * ((-4.0) * fThisValue
@@ -72,11 +70,8 @@ simpleStencil_Kernel(StencilArray_t d_array_old, StencilArray_t d_array_new)
                   + d_array_old.array[iIndex - 1]
                   + d_array_old.array[iIndex + d_array_old.size]
                   + d_array_old.array[iIndex - d_array_old.size]);
-      }
+        d_array_new.array[iIndex] = act_sum;
     }
-    d_array_new.array[iIndex] = act_sum;
-    //__syncthreads();
-    //d_array.array[iIndex] = act_sum;
 }
 
 __global__ void
@@ -94,16 +89,15 @@ optStencil_Kernel(StencilArray_t d_array_old, StencilArray_t d_array_new)
 
     float act_sum;
 
-    for(int i=0; i<DEFAULT_STEPS; i++){
-      /* Copy the helo-Values to shared memory */
-      if(threadIdx.x < size && iIndex >= size)
-        shMemBlock[threadIdx.x] = d_array_old.array[iIndex-size];
-      if((threadIdx.x >= blockDim.x - size) && (iIndex < (blockDim.x*gridDim.x - size)))
-        shMemBlock[threadIdx.x+2*iOffset] = d_array_old.array[iIndex+size];
+    /* Copy the helo-Values to shared memory */
+    if(threadIdx.x < size && iIndex >= size)
+      shMemBlock[threadIdx.x] = d_array_old.array[iIndex-size];
+    if((threadIdx.x >= blockDim.x - size) && (iIndex < (blockDim.x*gridDim.x - size)))
+      shMemBlock[threadIdx.x+2*iOffset] = d_array_old.array[iIndex+size];
 
-      __syncthreads();
+    __syncthreads();
 
-      if(!isBorder(size, iIndex)) {
+    if(!isBorder(size, iIndex)) {
 
         act_sum = fThisValue + 24.0 / 100.0
                   * ((-4.0) * fThisValue
@@ -111,15 +105,8 @@ optStencil_Kernel(StencilArray_t d_array_old, StencilArray_t d_array_new)
                   + shMemBlock[threadIdx.x + iOffset - 1]
                   + shMemBlock[threadIdx.x + iOffset + size]
                   + shMemBlock[threadIdx.x + iOffset - size]);
-      }
-
-      /* Copy back the helo-Values to global memory */
-      if(threadIdx.x < size && iIndex >= size)
-        d_array_old.array[iIndex-size] = shMemBlock[threadIdx.x];
-      if((threadIdx.x >= blockDim.x - size) && (iIndex < (blockDim.x*gridDim.x - size)))
-        d_array_old.array[iIndex+size] = shMemBlock[threadIdx.x+2*iOffset];
+      d_array_new.array[iIndex] = act_sum;
     }
-    d_array_new.array[iIndex] = act_sum;
 }
 //
 // Main
@@ -358,8 +345,11 @@ main(int argc, char * argv[])
                 << " GB/s" << std::endl
               << "***    Time for Stencil Computation (optimized): " << 1e3 * kernelTimer.getTime() / numIterations
                 << " ms" << std::endl
+              << "***    Bandwidth Stencil Computation (optimized): " << 1e-9 * kernelTimer.getBandwidth(numElements * sizeof(*h_array.array)) * numIterations
+                << " GB/s" << std::endl
               << "***    Time for Stencil Computation (simple): " << 1e3 * kernelTimer_simple.getTime() / numIterations
                 << " ms" << std::endl
+              << "***    Bandwidth Stencil Computation (simple): " << 1e-9 * kernelTimer_simple.getBandwidth(numElements * sizeof(*h_array.array)) * numIterations
               << "***" << std::endl;
 
     return 0;
