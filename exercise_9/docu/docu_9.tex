@@ -175,5 +175,24 @@ factor for larger time tile size.
 
 It is positiv that this can be applied well vor many diffrent GPUs and different stencils. Furthermore they are very concrete in telling how to actually apply and implement this method. So I really like the paper.
 \end{homeworkProblem}
+
+%----------------------------------------------------------------------------------------
+%	stencil
+%----------------------------------------------------------------------------------------
+
+\begin{homeworkProblem}[Stencil Code]
+In dieser Übung soll die Heat-Relaxation als GPU-Programm realisiert werden. Zunächst
+soll eine naive Version, anschließend eine optimierte Version implentiert werden.
+\\\\
+Die naive Version des Stencil-Code wurde via 1D-Partitionierung parallelisiert. Für die 
+Optimierung wurde dieser Code bezüglich der Nutzung von Shared-Memory optimiert. Jede 
+Partition des Grids, welche von einem Block verwendet wird, wird somit in das Shared-Memory
+kopiert. Zusätzlich werden auch die Halo-Elemente in das Shared-Memory kopiert.
+\\\\
+Bei der Performance-Analyse wurde jedoch festgestellt, dass die optimierte Version
+deutlich schlechtere Leistung liefert als die naive. So erreichte der optimierte Code
+lediglich 14 GB/s und der naive bis zu 23 GB/s. Ein Grund hierfür wurde leider nicht
+gefunden.
+\end{homeworkProblem}
 \pagebreak
 \end{document}
